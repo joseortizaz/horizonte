@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { PhaserGame } from './game/PhaserGame'
@@ -10,6 +10,9 @@ import { useAvatar } from './avatar/useAvatar'
 import type { Avatar } from './avatar/tipos'
 import { usePartida } from './partida/usePartida'
 import type { Partida, Posicion } from './partida/tipos'
+import { Narrativa } from './narrativa/motor'
+import type { PasoDialogo } from './narrativa/motor'
+import { DialogoPanel } from './narrativa/DialogoPanel'
 import { supabase } from './lib/supabase'
 import './App.css'
 
@@ -82,6 +85,41 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
   const posicionPendiente = useRef<Posicion | null>(null)
   const nombre = (session.user.user_metadata.display_name as string | undefined) ?? 'Navegante'
 
+  // Motor de diálogos: se crea una vez, con las decisiones guardadas en la partida
+  const [narrativa] = useState(() => {
+    const n = new Narrativa(partida.narrativa)
+    n.fijarVariable('faro_encendido', partida.faros.includes('raices'))
+    return n
+  })
+  const [dialogo, setDialogo] = useState<{ paso: PasoDialogo; id: number } | null>(null)
+  const dialogoAbierto = useRef(false)
+  const contadorPasos = useRef(0)
+
+  const mostrarPaso = useCallback(
+    (paso: PasoDialogo) => {
+      for (const evento of paso.eventos) {
+        if (evento === 'mision-faro' && !actual.current.faros.includes('raices')) {
+          setMensaje('Misión: encuentra el faro al noreste de la isla y enciéndelo.')
+        }
+      }
+      contadorPasos.current += 1
+      setDialogo({ paso, id: contadorPasos.current })
+    },
+    [actual]
+  )
+
+  const elegir = useCallback(
+    (indice: number) => mostrarPaso(narrativa.elegir(indice)),
+    [mostrarPaso, narrativa]
+  )
+
+  const cerrarDialogo = useCallback(() => {
+    dialogoAbierto.current = false
+    setDialogo(null)
+    EventBus.emit('dialogo-cerrado')
+    void guardar({ narrativa: narrativa.guardarEstado() })
+  }, [guardar, narrativa])
+
   useEffect(() => {
     // Guarda la última posición conocida, si hay una pendiente
     const guardarPosicion = () => {
@@ -95,12 +133,20 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
       posicionPendiente.current = posicion
     }
 
+    const alHablar = (nudo: string) => {
+      if (dialogoAbierto.current) return
+      dialogoAbierto.current = true
+      EventBus.emit('dialogo-abierto')
+      mostrarPaso(narrativa.iniciar(nudo))
+    }
+
     const alEncenderFaro = (id: string) => {
       const encendidos = actual.current.faros
       if (encendidos.includes(id)) return
+      narrativa.fijarVariable('faro_encendido', true)
       setFaros(encendidos.length + 1)
-      setMensaje('¡Encendiste el Faro de las Raíces! La Bruma retrocede.')
-      void guardar({ faros: [...encendidos, id] })
+      setMensaje('¡Encendiste el Faro de las Raíces! La Bruma retrocede. Marea querrá saberlo.')
+      void guardar({ faros: [...encendidos, id], narrativa: narrativa.guardarEstado() })
     }
 
     const alOcultarse = () => {
@@ -108,6 +154,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
     }
 
     EventBus.on('posicion', alMoverse)
+    EventBus.on('hablar', alHablar)
     EventBus.on('faro-encendido', alEncenderFaro)
     document.addEventListener('visibilitychange', alOcultarse)
     const intervalo = window.setInterval(guardarPosicion, GUARDADO_POSICION_MS)
@@ -115,11 +162,12 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
     return () => {
       guardarPosicion()
       EventBus.off('posicion', alMoverse)
+      EventBus.off('hablar', alHablar)
       EventBus.off('faro-encendido', alEncenderFaro)
       document.removeEventListener('visibilitychange', alOcultarse)
       window.clearInterval(intervalo)
     }
-  }, [actual, guardar])
+  }, [actual, guardar, mostrarPaso, narrativa])
 
   return (
     <div className="app">
@@ -132,7 +180,17 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
           <button onClick={() => supabase.auth.signOut()}>Salir</button>
         </span>
       </header>
-      <PhaserGame avatar={avatar} partida={partida} />
+      <div className="escenario">
+        <PhaserGame avatar={avatar} partida={partida} />
+        {dialogo && (
+          <DialogoPanel
+            key={dialogo.id}
+            paso={dialogo.paso}
+            onElegir={elegir}
+            onCerrar={cerrarDialogo}
+          />
+        )}
+      </div>
       <p className="mensaje">{mensaje}</p>
     </div>
   )

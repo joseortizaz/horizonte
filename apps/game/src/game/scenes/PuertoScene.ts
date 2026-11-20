@@ -1,23 +1,32 @@
 import * as Phaser from 'phaser'
 import { EventBus } from '../EventBus'
 import { avatarSvg, companeroSvg, svgADataUri } from '../../avatar/dibujo'
+import { mareaSvg } from '../personajes'
 import type { Avatar } from '../../avatar/tipos'
 import type { Partida } from '../../partida/tipos'
 
 const VELOCIDAD = 220
 const AVISO_POSICION_MS = 5000
+const DISTANCIA_PARA_HABLAR = 70
 
 export class PuertoScene extends Phaser.Scene {
   private jugador!: Phaser.GameObjects.Image
   private companero!: Phaser.GameObjects.Image
+  private marea!: Phaser.GameObjects.Image
+  private indicadorMarea!: Phaser.GameObjects.Text
+  private avisoHablar!: Phaser.GameObjects.Text
   private faro!: Phaser.GameObjects.Rectangle
   private luzFaro!: Phaser.GameObjects.Arc
   private bruma!: Phaser.GameObjects.Rectangle
   private nubes: Phaser.GameObjects.Ellipse[] = []
   private flechas!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
+  private teclaHablar!: Phaser.Input.Keyboard.Key
+  private teclaEspacio!: Phaser.Input.Keyboard.Key
   private destino: Phaser.Math.Vector2 | null = null
   private faroEncendido = false
+  private enDialogo = false
+  private ignorarToque = false
   private ultimaPosicionAvisada = new Phaser.Math.Vector2()
   private ultimoAviso = 0
 
@@ -30,6 +39,7 @@ export class PuertoScene extends Phaser.Scene {
     const avatar = this.registry.get('avatar') as Avatar
     this.load.image('avatar', svgADataUri(avatarSvg(avatar.apariencia)))
     this.load.image('companero', svgADataUri(companeroSvg(avatar.companero)))
+    this.load.image('marea', svgADataUri(mareaSvg()))
   }
 
   create() {
@@ -45,6 +55,40 @@ export class PuertoScene extends Phaser.Scene {
     this.faro.setStrokeStyle(2, 0x5b4636)
     this.luzFaro = this.add.circle(this.faro.x, this.faro.y - 40, 12, 0x555555)
     this.luzFaro.setDepth(10)
+
+    // Marea, la guardiana de la isla
+    this.marea = this.add.image(width * 0.45, height * 0.72, 'marea').setDepth(9)
+    this.marea.setInteractive({ useHandCursor: true })
+    this.indicadorMarea = this.add
+      .text(this.marea.x, this.marea.y - 58, '!', {
+        fontFamily: 'sans-serif',
+        fontSize: '26px',
+        fontStyle: 'bold',
+        color: '#ffd54f',
+        stroke: '#1c2833',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(20)
+    this.tweens.add({
+      targets: this.indicadorMarea,
+      y: this.indicadorMarea.y - 6,
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    })
+    this.avisoHablar = this.add
+      .text(this.marea.x, this.marea.y + 50, 'Pulsa E o toca para hablar', {
+        fontFamily: 'sans-serif',
+        fontSize: '14px',
+        color: '#ffffff',
+        backgroundColor: '#1c2833cc',
+        padding: { x: 8, y: 4 },
+      })
+      .setOrigin(0.5)
+      .setDepth(20)
+      .setVisible(false)
 
     // Personaje del jugador y su compañero
     const inicio = partida.posicion ?? { x: width * 0.3, y: height * 0.6 }
@@ -95,17 +139,59 @@ export class PuertoScene extends Phaser.Scene {
       color: '#ffffff',
     }).setDepth(20)
 
-    // Controles: teclado (flechas o WASD) y toque o clic
+    // Controles: teclado (flechas o WASD), E o Espacio para hablar, y toque o clic
     const teclado = this.input.keyboard!
     this.flechas = teclado.createCursorKeys()
     this.wasd = teclado.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>
+    this.teclaHablar = teclado.addKey(Phaser.Input.Keyboard.KeyCodes.E)
+    this.teclaEspacio = teclado.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+
+    // Tocar a Marea: si está cerca, conversa; si no, camina hacia ella
+    this.marea.on('pointerdown', () => {
+      if (this.enDialogo) return
+      if (this.cercaDeMarea()) {
+        this.ignorarToque = true
+        this.destino = null
+        this.hablarConMarea()
+      }
+    })
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (this.ignorarToque || this.enDialogo) {
+        this.ignorarToque = false
+        return
+      }
       this.destino = new Phaser.Math.Vector2(p.worldX, p.worldY)
     })
+
+    // Mientras hay un diálogo abierto, el jugador no se mueve
+    const alAbrirDialogo = () => {
+      this.enDialogo = true
+      this.destino = null
+      this.avisoHablar.setVisible(false)
+    }
+    const alCerrarDialogo = () => {
+      this.enDialogo = false
+    }
+    EventBus.on('dialogo-abierto', alAbrirDialogo)
+    EventBus.on('dialogo-cerrado', alCerrarDialogo)
+
+    const limpiar = () => {
+      EventBus.off('dialogo-abierto', alAbrirDialogo)
+      EventBus.off('dialogo-cerrado', alCerrarDialogo)
+    }
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, limpiar)
+    this.events.once(Phaser.Scenes.Events.DESTROY, limpiar)
   }
 
   update(time: number, delta: number) {
+    // Durante un diálogo: consumir las teclas para que no reabran la conversación
+    if (this.enDialogo) {
+      Phaser.Input.Keyboard.JustDown(this.teclaHablar)
+      Phaser.Input.Keyboard.JustDown(this.teclaEspacio)
+      return
+    }
+
     const dt = delta / 1000
     let dx = 0
     let dy = 0
@@ -148,6 +234,14 @@ export class PuertoScene extends Phaser.Scene {
     this.companero.x += (this.jugador.x - 34 - this.companero.x) * suavidad
     this.companero.y += (this.jugador.y - 30 + flotar - this.companero.y) * suavidad
 
+    // Cerca de Marea: mostrar el aviso y permitir conversar con E o Espacio
+    const cerca = this.cercaDeMarea()
+    this.avisoHablar.setVisible(cerca)
+    const pidioHablar =
+      Phaser.Input.Keyboard.JustDown(this.teclaHablar) ||
+      Phaser.Input.Keyboard.JustDown(this.teclaEspacio)
+    if (cerca && pidioHablar) this.hablarConMarea()
+
     // Avisa a React la posición cada pocos segundos, solo si el jugador se movió
     if (time - this.ultimoAviso > AVISO_POSICION_MS) {
       this.ultimoAviso = time
@@ -162,11 +256,23 @@ export class PuertoScene extends Phaser.Scene {
 
     // ¿Llegó al faro?
     if (!this.faroEncendido) {
-      const cerca = Phaser.Math.Distance.Between(
+      const distanciaFaro = Phaser.Math.Distance.Between(
         this.jugador.x, this.jugador.y, this.faro.x, this.faro.y
       )
-      if (cerca < 50) this.encenderFaro()
+      if (distanciaFaro < 50) this.encenderFaro()
     }
+  }
+
+  private cercaDeMarea() {
+    return (
+      Phaser.Math.Distance.Between(this.jugador.x, this.jugador.y, this.marea.x, this.marea.y) <
+      DISTANCIA_PARA_HABLAR
+    )
+  }
+
+  private hablarConMarea() {
+    this.indicadorMarea.setVisible(false)
+    EventBus.emit('hablar', 'marea')
   }
 
   private encenderFaro() {

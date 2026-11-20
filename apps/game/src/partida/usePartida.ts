@@ -15,7 +15,7 @@ export function usePartida(userId: string) {
 
     supabase
       .from('game_saves')
-      .select('region, faros_encendidos, posicion')
+      .select('region, faros_encendidos, posicion, narrativa')
       .eq('profile_id', userId)
       .maybeSingle()
       .then(({ data }) => {
@@ -25,6 +25,7 @@ export function usePartida(userId: string) {
               region: data.region as string,
               faros: (data.faros_encendidos as string[]) ?? [],
               posicion: (data.posicion as Posicion | null) ?? null,
+              narrativa: (data.narrativa as string | null) ?? null,
             }
           : PARTIDA_NUEVA
         actual.current = partida
@@ -45,6 +46,7 @@ export function usePartida(userId: string) {
         region: p.region,
         faros_encendidos: p.faros,
         posicion: p.posicion,
+        narrativa: p.narrativa,
         updated_at: new Date().toISOString(),
       })
       if (error) console.warn('No se pudo guardar la partida:', error.message)
