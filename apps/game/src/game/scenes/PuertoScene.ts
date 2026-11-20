@@ -2,8 +2,10 @@ import * as Phaser from 'phaser'
 import { EventBus } from '../EventBus'
 import { avatarSvg, companeroSvg, svgADataUri } from '../../avatar/dibujo'
 import type { Avatar } from '../../avatar/tipos'
+import type { Partida } from '../../partida/tipos'
 
 const VELOCIDAD = 220
+const AVISO_POSICION_MS = 5000
 
 export class PuertoScene extends Phaser.Scene {
   private jugador!: Phaser.GameObjects.Image
@@ -16,6 +18,8 @@ export class PuertoScene extends Phaser.Scene {
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
   private destino: Phaser.Math.Vector2 | null = null
   private faroEncendido = false
+  private ultimaPosicionAvisada = new Phaser.Math.Vector2()
+  private ultimoAviso = 0
 
   constructor() {
     super('PuertoScene')
@@ -30,6 +34,7 @@ export class PuertoScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale
+    const partida = this.registry.get('partida') as Partida
 
     // Mar e isla
     this.add.rectangle(0, 0, width, height, 0x1b4f72).setOrigin(0)
@@ -42,7 +47,9 @@ export class PuertoScene extends Phaser.Scene {
     this.luzFaro.setDepth(10)
 
     // Personaje del jugador y su compañero
-    this.jugador = this.add.image(width * 0.3, height * 0.6, 'avatar').setDepth(10)
+    const inicio = partida.posicion ?? { x: width * 0.3, y: height * 0.6 }
+    this.jugador = this.add.image(inicio.x, inicio.y, 'avatar').setDepth(10)
+    this.ultimaPosicionAvisada.set(inicio.x, inicio.y)
     this.companero = this.add
       .image(this.jugador.x - 34, this.jugador.y - 30, 'companero')
       .setDepth(11)
@@ -72,6 +79,14 @@ export class PuertoScene extends Phaser.Scene {
       })
 
       this.nubes.push(nube)
+    }
+
+    // Si el faro ya estaba encendido en la partida guardada, la isla aparece despejada
+    if (partida.faros.includes('raices')) {
+      this.faroEncendido = true
+      this.luzFaro.setFillStyle(0xffd54f)
+      this.bruma.setAlpha(0)
+      this.nubes.forEach((nube) => nube.setAlpha(0))
     }
 
     this.add.text(16, 16, 'Isla de las Raíces', {
@@ -132,6 +147,18 @@ export class PuertoScene extends Phaser.Scene {
     const flotar = Math.sin(time / 300) * 4
     this.companero.x += (this.jugador.x - 34 - this.companero.x) * suavidad
     this.companero.y += (this.jugador.y - 30 + flotar - this.companero.y) * suavidad
+
+    // Avisa a React la posición cada pocos segundos, solo si el jugador se movió
+    if (time - this.ultimoAviso > AVISO_POSICION_MS) {
+      this.ultimoAviso = time
+      const movido = Phaser.Math.Distance.Between(
+        this.jugador.x, this.jugador.y, this.ultimaPosicionAvisada.x, this.ultimaPosicionAvisada.y
+      )
+      if (movido > 2) {
+        this.ultimaPosicionAvisada.set(this.jugador.x, this.jugador.y)
+        EventBus.emit('posicion', { x: Math.round(this.jugador.x), y: Math.round(this.jugador.y) })
+      }
+    }
 
     // ¿Llegó al faro?
     if (!this.faroEncendido) {

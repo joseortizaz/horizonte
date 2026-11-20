@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { PhaserGame } from './game/PhaserGame'
 import { EventBus } from './game/EventBus'
@@ -7,8 +8,12 @@ import { useSession } from './auth/useSession'
 import { AvatarCreator } from './avatar/AvatarCreator'
 import { useAvatar } from './avatar/useAvatar'
 import type { Avatar } from './avatar/tipos'
+import { usePartida } from './partida/usePartida'
+import type { Partida, Posicion } from './partida/tipos'
 import { supabase } from './lib/supabase'
 import './App.css'
+
+const GUARDADO_POSICION_MS = 15000
 
 export default function App() {
   const { session, cargando } = useSession()
@@ -20,46 +25,101 @@ export default function App() {
 
 // Con sesión iniciada: primero el creador de personaje (si no existe), luego el juego
 function Sesion({ session }: { session: Session }) {
-  const { avatar, cargando, guardar } = useAvatar(session.user.id)
+  const { avatar, cargando: cargandoAvatar, guardar: guardarAvatar } = useAvatar(session.user.id)
+  const { partidaInicial, cargando: cargandoPartida, guardar, actual } = usePartida(session.user.id)
   const [editando, setEditando] = useState(false)
+  // Al volver del editor, el juego arranca con la partida más reciente
+  const [partidaJuego, setPartidaJuego] = useState<Partida | null>(null)
 
-  if (cargando) return <div className="cargando">Cargando…</div>
+  if (cargandoAvatar || cargandoPartida || !partidaInicial) {
+    return <div className="cargando">Cargando…</div>
+  }
+
+  const volverAlJuego = () => {
+    setPartidaJuego({ ...actual.current })
+    setEditando(false)
+  }
 
   if (!avatar || editando) {
     return (
       <AvatarCreator
         inicial={avatar}
         onGuardar={async (nuevo) => {
-          await guardar(nuevo)
-          setEditando(false)
+          await guardarAvatar(nuevo)
+          volverAlJuego()
         }}
-        onCancelar={avatar ? () => setEditando(false) : undefined}
+        onCancelar={avatar ? volverAlJuego : undefined}
       />
     )
   }
 
-  return <Juego session={session} avatar={avatar} onEditarPersonaje={() => setEditando(true)} />
+  return (
+    <Juego
+      session={session}
+      avatar={avatar}
+      partida={partidaJuego ?? partidaInicial}
+      actual={actual}
+      guardar={guardar}
+      onEditarPersonaje={() => setEditando(true)}
+    />
+  )
 }
 
-function Juego({ session, avatar, onEditarPersonaje }: {
+function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }: {
   session: Session
   avatar: Avatar
+  partida: Partida
+  actual: RefObject<Partida>
+  guardar: (cambios: Partial<Partida>) => Promise<void>
   onEditarPersonaje: () => void
 }) {
-  const [faros, setFaros] = useState(0)
-  const [mensaje, setMensaje] = useState('Explora la isla y encuentra el faro.')
+  const [faros, setFaros] = useState(partida.faros.length)
+  const [mensaje, setMensaje] = useState(
+    partida.faros.includes('raices')
+      ? 'El Faro de las Raíces ya brilla. Pronto se abrirán nuevas regiones.'
+      : 'Explora la isla y encuentra el faro.'
+  )
+  const posicionPendiente = useRef<Posicion | null>(null)
   const nombre = (session.user.user_metadata.display_name as string | undefined) ?? 'Navegante'
 
   useEffect(() => {
-    const alEncenderFaro = () => {
-      setFaros((n) => n + 1)
+    // Guarda la última posición conocida, si hay una pendiente
+    const guardarPosicion = () => {
+      if (!posicionPendiente.current) return
+      const posicion = posicionPendiente.current
+      posicionPendiente.current = null
+      void guardar({ posicion })
+    }
+
+    const alMoverse = (posicion: Posicion) => {
+      posicionPendiente.current = posicion
+    }
+
+    const alEncenderFaro = (id: string) => {
+      const encendidos = actual.current.faros
+      if (encendidos.includes(id)) return
+      setFaros(encendidos.length + 1)
       setMensaje('¡Encendiste el Faro de las Raíces! La Bruma retrocede.')
+      void guardar({ faros: [...encendidos, id] })
     }
+
+    const alOcultarse = () => {
+      if (document.visibilityState === 'hidden') guardarPosicion()
+    }
+
+    EventBus.on('posicion', alMoverse)
     EventBus.on('faro-encendido', alEncenderFaro)
+    document.addEventListener('visibilitychange', alOcultarse)
+    const intervalo = window.setInterval(guardarPosicion, GUARDADO_POSICION_MS)
+
     return () => {
+      guardarPosicion()
+      EventBus.off('posicion', alMoverse)
       EventBus.off('faro-encendido', alEncenderFaro)
+      document.removeEventListener('visibilitychange', alOcultarse)
+      window.clearInterval(intervalo)
     }
-  }, [])
+  }, [actual, guardar])
 
   return (
     <div className="app">
@@ -72,7 +132,7 @@ function Juego({ session, avatar, onEditarPersonaje }: {
           <button onClick={() => supabase.auth.signOut()}>Salir</button>
         </span>
       </header>
-      <PhaserGame avatar={avatar} />
+      <PhaserGame avatar={avatar} partida={partida} />
       <p className="mensaje">{mensaje}</p>
     </div>
   )

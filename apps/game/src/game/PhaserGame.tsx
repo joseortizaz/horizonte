@@ -2,8 +2,9 @@ import { useEffect, useRef } from 'react'
 import * as Phaser from 'phaser'
 import { PuertoScene } from './scenes/PuertoScene'
 import type { Avatar } from '../avatar/tipos'
+import type { Partida } from '../partida/tipos'
 
-export function PhaserGame({ avatar }: { avatar: Avatar }) {
+export function PhaserGame({ avatar, partida }: { avatar: Avatar; partida: Partida }) {
   const contenedor = useRef<HTMLDivElement>(null)
   const juego = useRef<Phaser.Game | null>(null)
 
@@ -20,10 +21,11 @@ export function PhaserGame({ avatar }: { avatar: Avatar }) {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
       },
-      // Pasa el personaje al juego antes de que arranquen las escenas
+      // Pasa el personaje y la partida al juego antes de que arranquen las escenas
       callbacks: {
         preBoot: (game) => {
           game.registry.set('avatar', avatar)
+          game.registry.set('partida', partida)
         },
       },
       scene: [PuertoScene],
@@ -33,7 +35,7 @@ export function PhaserGame({ avatar }: { avatar: Avatar }) {
       juego.current?.destroy(true)
       juego.current = null
     }
-  }, [avatar])
+  }, [avatar, partida])
 
   return <div ref={contenedor} className="game-container" />
 }
