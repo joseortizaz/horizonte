@@ -23,3 +23,125 @@
   padding: 12px;
   text-align: center;
 }
+.hud-usuario {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hud-usuario button {
+  padding: 4px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+/* Pantalla de carga */
+.cargando {
+  display: grid;
+  place-items: center;
+  height: 100vh;
+  background: #0e2a3d;
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+}
+
+/* Pantalla de acceso */
+.auth {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: linear-gradient(180deg, #0e2a3d 0%, #1b4f72 100%);
+  font-family: system-ui, sans-serif;
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 380px;
+  padding: 32px 28px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #1c2833;
+}
+
+.auth-card h1 {
+  margin: 0;
+  text-align: center;
+  color: #0e2a3d;
+}
+
+.auth-sub {
+  margin: -6px 0 6px;
+  text-align: center;
+  color: #5d6d7e;
+}
+
+.auth-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.auth-card input {
+  padding: 10px 12px;
+  border: 1px solid #ccd1d1;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.auth-card button[type='submit'] {
+  margin-top: 6px;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #e67e22;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-card button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth-cambiar {
+  border: none;
+  background: none;
+  color: #1b4f72;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.auth-nota,
+.auth-error,
+.auth-aviso {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.auth-nota {
+  background: #eaf2f8;
+  color: #1b4f72;
+}
+
+.auth-error {
+  background: #fdedec;
+  color: #922b21;
+}
+
+.auth-aviso {
+  background: #e9f7ef;
+  color: #1e8449;
+}
