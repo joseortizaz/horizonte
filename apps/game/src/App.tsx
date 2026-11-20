@@ -7,6 +7,7 @@ import { AuthScreen } from './auth/AuthScreen'
 import { useSession } from './auth/useSession'
 import { AvatarCreator } from './avatar/AvatarCreator'
 import { useAvatar } from './avatar/useAvatar'
+import { COMPANEROS } from './avatar/tipos'
 import type { Avatar } from './avatar/tipos'
 import { usePartida } from './partida/usePartida'
 import type { Partida, Posicion } from './partida/tipos'
@@ -17,6 +18,19 @@ import { supabase } from './lib/supabase'
 import './App.css'
 
 const GUARDADO_POSICION_MS = 15000
+
+const NOMBRES_INSIGNIAS: Record<string, string> = {
+  autoconocimiento: 'Autoconocimiento',
+}
+
+// Qué variables de la historia indican que algo de la isla ya quedó resuelto
+const RESUELTOS: Record<string, string> = {
+  marea: 'conoce_a_marea',
+  concha: 'tiene_concha',
+  huella: 'tiene_huella',
+  semilla: 'tiene_semilla',
+  eco: 'eco_resuelto',
+}
 
 export default function App() {
   const { session, cargando } = useSession()
@@ -80,32 +94,76 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
   const [mensaje, setMensaje] = useState(
     partida.faros.includes('raices')
       ? 'El Faro de las Raíces ya brilla. Pronto se abrirán nuevas regiones.'
-      : 'Explora la isla y encuentra el faro.'
+      : 'Explora la Isla de las Raíces.'
   )
   const posicionPendiente = useRef<Posicion | null>(null)
   const nombre = (session.user.user_metadata.display_name as string | undefined) ?? 'Navegante'
 
   // Motor de diálogos: se crea una vez, con las decisiones guardadas en la partida
   const [narrativa] = useState(() => {
-    const n = new Narrativa(partida.narrativa)
+    const companero = COMPANEROS.find((c) => c.id === avatar.companero)?.nombre ?? 'Compañero'
+    const n = new Narrativa(partida.narrativa, companero)
     n.fijarVariable('faro_encendido', partida.faros.includes('raices'))
     return n
   })
+  // Lo que ya está resuelto en la isla, para que el juego no lo vuelva a mostrar
+  const [resueltos] = useState(() =>
+    Object.keys(RESUELTOS).filter((id) => narrativa.leerVariable(RESUELTOS[id]) === true)
+  )
+  const [insignia, setInsignia] = useState<string | null>(null)
   const [dialogo, setDialogo] = useState<{ paso: PasoDialogo; id: number } | null>(null)
   const dialogoAbierto = useRef(false)
   const contadorPasos = useRef(0)
 
+  const otorgarInsignia = useCallback(
+    (cualidad: string) => {
+      setInsignia(NOMBRES_INSIGNIAS[cualidad] ?? cualidad)
+      window.setTimeout(() => setInsignia(null), 6000)
+      void supabase
+        .from('insignias')
+        .upsert(
+          { profile_id: session.user.id, cualidad, nivel: 'bronce', origen: 'isla-raices' },
+          { onConflict: 'profile_id,cualidad,nivel', ignoreDuplicates: true }
+        )
+        .then(({ error }) => {
+          if (error) console.warn('No se pudo guardar la insignia:', error.message)
+        })
+    },
+    [session.user.id]
+  )
+
+  // Reacciona a los eventos que marca el guion (# evento: ...)
   const mostrarPaso = useCallback(
     (paso: PasoDialogo) => {
       for (const evento of paso.eventos) {
-        if (evento === 'mision-faro' && !actual.current.faros.includes('raices')) {
-          setMensaje('Misión: encuentra el faro al noreste de la isla y enciéndelo.')
+        const [tipo, valor] = evento.split(':')
+        const recuerdos = Number(narrativa.leerVariable('recuerdos') ?? 0)
+
+        if (tipo === 'mision-marea') {
+          setMensaje('Habla con la mujer del bastón, en la orilla.')
+        } else if (tipo === 'mision-recuerdos') {
+          setMensaje(`Misión: encuentra los tres Recuerdos entre la Bruma (${recuerdos} / 3).`)
+        } else if (tipo === 'recoger') {
+          EventBus.emit('resolver', valor)
+          setMensaje(
+            recuerdos >= 3
+              ? '¡Tienes los tres Recuerdos! Ve al faro, al noreste de la isla.'
+              : `Recuerdos encontrados: ${recuerdos} / 3`
+          )
+        } else if (tipo === 'ocultar') {
+          EventBus.emit('resolver', valor)
+        } else if (tipo === 'encender-faro') {
+          EventBus.emit('encender-faro')
+        } else if (tipo === 'insignia') {
+          otorgarInsignia(valor)
+        } else if (tipo === 'fin-acto-1') {
+          setMensaje('Fin del Acto I. ¡Gracias por jugar este prototipo!')
         }
       }
       contadorPasos.current += 1
       setDialogo({ paso, id: contadorPasos.current })
     },
-    [actual]
+    [narrativa, otorgarInsignia]
   )
 
   const elegir = useCallback(
@@ -145,8 +203,13 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
       if (encendidos.includes(id)) return
       narrativa.fijarVariable('faro_encendido', true)
       setFaros(encendidos.length + 1)
-      setMensaje('¡Encendiste el Faro de las Raíces! La Bruma retrocede. Marea querrá saberlo.')
+      setMensaje('¡El Faro de las Raíces brilla! Vuelve con Marea.')
       void guardar({ faros: [...encendidos, id], narrativa: narrativa.guardarEstado() })
+    }
+
+    // Primera vez en la isla: el prólogo empieza solo
+    const alEscenaLista = () => {
+      if (!narrativa.leerVariable('prologo_visto')) alHablar('prologo')
     }
 
     const alOcultarse = () => {
@@ -156,6 +219,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
     EventBus.on('posicion', alMoverse)
     EventBus.on('hablar', alHablar)
     EventBus.on('faro-encendido', alEncenderFaro)
+    EventBus.on('escena-lista', alEscenaLista)
     document.addEventListener('visibilitychange', alOcultarse)
     const intervalo = window.setInterval(guardarPosicion, GUARDADO_POSICION_MS)
 
@@ -164,6 +228,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
       EventBus.off('posicion', alMoverse)
       EventBus.off('hablar', alHablar)
       EventBus.off('faro-encendido', alEncenderFaro)
+      EventBus.off('escena-lista', alEscenaLista)
       document.removeEventListener('visibilitychange', alOcultarse)
       window.clearInterval(intervalo)
     }
@@ -181,7 +246,16 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
         </span>
       </header>
       <div className="escenario">
-        <PhaserGame avatar={avatar} partida={partida} />
+        <PhaserGame avatar={avatar} partida={partida} resueltos={resueltos} />
+        {insignia && (
+          <div className="insignia-toast" role="status">
+            <span className="insignia-medalla">★</span>
+            <span>
+              <small>Nueva insignia</small>
+              <strong>{insignia}</strong>
+            </span>
+          </div>
+        )}
         {dialogo && (
           <DialogoPanel
             key={dialogo.id}

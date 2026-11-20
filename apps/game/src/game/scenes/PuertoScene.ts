@@ -1,30 +1,43 @@
 import * as Phaser from 'phaser'
 import { EventBus } from '../EventBus'
 import { avatarSvg, companeroSvg, svgADataUri } from '../../avatar/dibujo'
-import { mareaSvg } from '../personajes'
+import { conchaSvg, ecoSvg, huellaSvg, mareaSvg, semillaSvg } from '../personajes'
 import type { Avatar } from '../../avatar/tipos'
 import type { Partida } from '../../partida/tipos'
 
 const VELOCIDAD = 220
 const AVISO_POSICION_MS = 5000
-const DISTANCIA_PARA_HABLAR = 70
+const RECUERDOS = ['concha', 'huella', 'semilla']
+
+// Algo con lo que el jugador puede interactuar: una persona, un objeto o el faro
+interface Interactivo {
+  id: string
+  nudo: string // nudo del guion de Ink que se abre al interactuar
+  x: number
+  y: number
+  radio: number
+  visual: Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle
+  activo: boolean
+  automatico: boolean // se activa solo al acercarse (sin pulsar nada)
+}
 
 export class PuertoScene extends Phaser.Scene {
   private jugador!: Phaser.GameObjects.Image
   private companero!: Phaser.GameObjects.Image
-  private marea!: Phaser.GameObjects.Image
   private indicadorMarea!: Phaser.GameObjects.Text
-  private avisoHablar!: Phaser.GameObjects.Text
+  private avisoInteractuar!: Phaser.GameObjects.Text
   private faro!: Phaser.GameObjects.Rectangle
   private luzFaro!: Phaser.GameObjects.Arc
   private bruma!: Phaser.GameObjects.Rectangle
   private nubes: Phaser.GameObjects.Ellipse[] = []
+  private interactivos: Interactivo[] = []
   private flechas!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
   private teclaHablar!: Phaser.Input.Keyboard.Key
   private teclaEspacio!: Phaser.Input.Keyboard.Key
   private destino: Phaser.Math.Vector2 | null = null
   private faroEncendido = false
+  private recuerdosEncontrados = 0
   private enDialogo = false
   private ignorarToque = false
   private ultimaPosicionAvisada = new Phaser.Math.Vector2()
@@ -40,27 +53,39 @@ export class PuertoScene extends Phaser.Scene {
     this.load.image('avatar', svgADataUri(avatarSvg(avatar.apariencia)))
     this.load.image('companero', svgADataUri(companeroSvg(avatar.companero)))
     this.load.image('marea', svgADataUri(mareaSvg()))
+    this.load.image('eco', svgADataUri(ecoSvg()))
+    this.load.image('concha', svgADataUri(conchaSvg()))
+    this.load.image('huella', svgADataUri(huellaSvg()))
+    this.load.image('semilla', svgADataUri(semillaSvg()))
   }
 
   create() {
     const { width, height } = this.scale
     const partida = this.registry.get('partida') as Partida
+    // Lo que ya se resolvió en la historia: recuerdos recogidos, eco vencido, etc.
+    const resueltos = (this.registry.get('resueltos') as string[]) ?? []
+    this.faroEncendido = partida.faros.includes('raices')
+    this.recuerdosEncontrados = RECUERDOS.filter((id) => resueltos.includes(id)).length
+    this.interactivos = []
+    this.nubes = []
 
     // Mar e isla
     this.add.rectangle(0, 0, width, height, 0x1b4f72).setOrigin(0)
     this.add.ellipse(width / 2, height / 2, width * 0.75, height * 0.65, 0xc9a66b)
 
-    // Faro (apagado al inicio)
+    // Faro
     this.faro = this.add.rectangle(width * 0.72, height * 0.38, 24, 60, 0xf4f1ea)
     this.faro.setStrokeStyle(2, 0x5b4636)
-    this.luzFaro = this.add.circle(this.faro.x, this.faro.y - 40, 12, 0x555555)
-    this.luzFaro.setDepth(10)
+    this.luzFaro = this.add
+      .circle(this.faro.x, this.faro.y - 40, 12, this.faroEncendido ? 0xffd54f : 0x555555)
+      .setDepth(10)
+    this.agregarInteractivo('faro', 'faro', this.faro, 60, false)
 
     // Marea, la guardiana de la isla
-    this.marea = this.add.image(width * 0.45, height * 0.72, 'marea').setDepth(9)
-    this.marea.setInteractive({ useHandCursor: true })
+    const marea = this.add.image(width * 0.45, height * 0.72, 'marea').setDepth(9)
+    this.agregarInteractivo('marea', 'marea', marea, 70, false)
     this.indicadorMarea = this.add
-      .text(this.marea.x, this.marea.y - 58, '!', {
+      .text(marea.x, marea.y - 58, '!', {
         fontFamily: 'sans-serif',
         fontSize: '26px',
         fontStyle: 'bold',
@@ -70,6 +95,7 @@ export class PuertoScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setDepth(20)
+      .setVisible(!resueltos.includes('marea'))
     this.tweens.add({
       targets: this.indicadorMarea,
       y: this.indicadorMarea.y - 6,
@@ -78,8 +104,30 @@ export class PuertoScene extends Phaser.Scene {
       repeat: -1,
       ease: 'Sine.easeInOut',
     })
-    this.avisoHablar = this.add
-      .text(this.marea.x, this.marea.y + 50, 'Pulsa E o toca para hablar', {
+
+    // Los tres Recuerdos, brillando entre la Bruma
+    this.crearRecuerdo('concha', width * 0.22, height * 0.45, resueltos)
+    this.crearRecuerdo('huella', width * 0.5, height * 0.3, resueltos)
+    this.crearRecuerdo('semilla', width * 0.65, height * 0.67, resueltos)
+
+    // El Eco, en el camino hacia el faro. Aparece solo al acercarse.
+    if (!resueltos.includes('eco')) {
+      const eco = this.add.image(width * 0.61, height * 0.42, 'eco').setDepth(9).setAlpha(0.85)
+      this.tweens.add({
+        targets: eco,
+        y: eco.y - 6,
+        alpha: 0.6,
+        duration: 1400,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      })
+      this.agregarInteractivo('eco', 'eco', eco, 75, true)
+    }
+
+    // Aviso que aparece sobre lo que está cerca
+    this.avisoInteractuar = this.add
+      .text(0, 0, 'Pulsa E o toca para interactuar', {
         fontFamily: 'sans-serif',
         fontSize: '14px',
         color: '#ffffff',
@@ -98,7 +146,7 @@ export class PuertoScene extends Phaser.Scene {
       .image(this.jugador.x - 34, this.jugador.y - 30, 'companero')
       .setDepth(11)
 
-    // La Bruma: una capa densa y nubes que se mueven lentamente
+    // La Bruma: más espesa al principio, se aclara con cada Recuerdo
     this.bruma = this.add.rectangle(0, 0, width, height, 0xdfe6ec, 0.7)
       .setOrigin(0)
       .setDepth(5)
@@ -124,14 +172,7 @@ export class PuertoScene extends Phaser.Scene {
 
       this.nubes.push(nube)
     }
-
-    // Si el faro ya estaba encendido en la partida guardada, la isla aparece despejada
-    if (partida.faros.includes('raices')) {
-      this.faroEncendido = true
-      this.luzFaro.setFillStyle(0xffd54f)
-      this.bruma.setAlpha(0)
-      this.nubes.forEach((nube) => nube.setAlpha(0))
-    }
+    this.ajustarBruma(0)
 
     this.add.text(16, 16, 'Isla de las Raíces', {
       fontFamily: 'sans-serif',
@@ -139,22 +180,12 @@ export class PuertoScene extends Phaser.Scene {
       color: '#ffffff',
     }).setDepth(20)
 
-    // Controles: teclado (flechas o WASD), E o Espacio para hablar, y toque o clic
+    // Controles: teclado (flechas o WASD), E o Espacio para interactuar, y toque o clic
     const teclado = this.input.keyboard!
     this.flechas = teclado.createCursorKeys()
     this.wasd = teclado.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>
     this.teclaHablar = teclado.addKey(Phaser.Input.Keyboard.KeyCodes.E)
     this.teclaEspacio = teclado.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
-
-    // Tocar a Marea: si está cerca, conversa; si no, camina hacia ella
-    this.marea.on('pointerdown', () => {
-      if (this.enDialogo) return
-      if (this.cercaDeMarea()) {
-        this.ignorarToque = true
-        this.destino = null
-        this.hablarConMarea()
-      }
-    })
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (this.ignorarToque || this.enDialogo) {
@@ -164,24 +195,34 @@ export class PuertoScene extends Phaser.Scene {
       this.destino = new Phaser.Math.Vector2(p.worldX, p.worldY)
     })
 
-    // Mientras hay un diálogo abierto, el jugador no se mueve
+    // Mensajes que llegan desde React (la historia)
     const alAbrirDialogo = () => {
       this.enDialogo = true
       this.destino = null
-      this.avisoHablar.setVisible(false)
+      this.avisoInteractuar.setVisible(false)
     }
     const alCerrarDialogo = () => {
       this.enDialogo = false
     }
+    const alResolver = (id: string) => this.resolver(id)
+    const alEncenderFaro = () => this.encenderFaro()
+
     EventBus.on('dialogo-abierto', alAbrirDialogo)
     EventBus.on('dialogo-cerrado', alCerrarDialogo)
+    EventBus.on('resolver', alResolver)
+    EventBus.on('encender-faro', alEncenderFaro)
 
     const limpiar = () => {
       EventBus.off('dialogo-abierto', alAbrirDialogo)
       EventBus.off('dialogo-cerrado', alCerrarDialogo)
+      EventBus.off('resolver', alResolver)
+      EventBus.off('encender-faro', alEncenderFaro)
     }
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, limpiar)
     this.events.once(Phaser.Scenes.Events.DESTROY, limpiar)
+
+    // Avisa a React que la escena está lista (por ejemplo, para iniciar el prólogo)
+    EventBus.emit('escena-lista')
   }
 
   update(time: number, delta: number) {
@@ -234,13 +275,23 @@ export class PuertoScene extends Phaser.Scene {
     this.companero.x += (this.jugador.x - 34 - this.companero.x) * suavidad
     this.companero.y += (this.jugador.y - 30 + flotar - this.companero.y) * suavidad
 
-    // Cerca de Marea: mostrar el aviso y permitir conversar con E o Espacio
-    const cerca = this.cercaDeMarea()
-    this.avisoHablar.setVisible(cerca)
-    const pidioHablar =
+    // ¿Hay algo cerca con qué interactuar?
+    const cercano = this.interactivoCercano()
+    const pidioInteractuar =
       Phaser.Input.Keyboard.JustDown(this.teclaHablar) ||
       Phaser.Input.Keyboard.JustDown(this.teclaEspacio)
-    if (cerca && pidioHablar) this.hablarConMarea()
+
+    if (cercano?.automatico) {
+      cercano.automatico = false
+      this.interactuar(cercano)
+    } else if (cercano) {
+      this.avisoInteractuar
+        .setPosition(cercano.x, cercano.y + 52)
+        .setVisible(true)
+      if (pidioInteractuar) this.interactuar(cercano)
+    } else {
+      this.avisoInteractuar.setVisible(false)
+    }
 
     // Avisa a React la posición cada pocos segundos, solo si el jugador se movió
     if (time - this.ultimoAviso > AVISO_POSICION_MS) {
@@ -253,32 +304,111 @@ export class PuertoScene extends Phaser.Scene {
         EventBus.emit('posicion', { x: Math.round(this.jugador.x), y: Math.round(this.jugador.y) })
       }
     }
+  }
 
-    // ¿Llegó al faro?
-    if (!this.faroEncendido) {
-      const distanciaFaro = Phaser.Math.Distance.Between(
-        this.jugador.x, this.jugador.y, this.faro.x, this.faro.y
-      )
-      if (distanciaFaro < 50) this.encenderFaro()
+  private agregarInteractivo(
+    id: string,
+    nudo: string,
+    visual: Interactivo['visual'],
+    radio: number,
+    automatico: boolean
+  ) {
+    const interactivo: Interactivo = {
+      id, nudo, x: visual.x, y: visual.y, radio, visual, activo: true, automatico,
+    }
+    this.interactivos.push(interactivo)
+
+    // Tocarlo: si está cerca, interactúa; si no, el jugador camina hacia allá
+    visual.setInteractive({ useHandCursor: true })
+    visual.on('pointerdown', () => {
+      if (this.enDialogo || !interactivo.activo) return
+      if (this.distanciaA(interactivo) < interactivo.radio) {
+        this.ignorarToque = true
+        this.destino = null
+        this.interactuar(interactivo)
+      }
+    })
+  }
+
+  private crearRecuerdo(id: string, x: number, y: number, resueltos: string[]) {
+    if (resueltos.includes(id)) return
+    const objeto = this.add.image(x, y, id).setDepth(9)
+    this.tweens.add({
+      targets: objeto,
+      scale: 1.15,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    })
+    this.agregarInteractivo(id, `recuerdo_${id}`, objeto, 55, false)
+  }
+
+  private interactivoCercano() {
+    let elegido: Interactivo | null = null
+    let menor = Infinity
+    for (const i of this.interactivos) {
+      if (!i.activo) continue
+      const d = this.distanciaA(i)
+      if (d < i.radio && d < menor) {
+        elegido = i
+        menor = d
+      }
+    }
+    return elegido
+  }
+
+  private distanciaA(i: Interactivo) {
+    return Phaser.Math.Distance.Between(this.jugador.x, this.jugador.y, i.x, i.y)
+  }
+
+  private interactuar(i: Interactivo) {
+    if (i.id === 'marea') this.indicadorMarea.setVisible(false)
+    this.avisoInteractuar.setVisible(false)
+    EventBus.emit('hablar', i.nudo)
+  }
+
+  // La historia avisó que algo quedó resuelto: se recogió un Recuerdo o se venció al Eco
+  private resolver(id: string) {
+    const interactivo = this.interactivos.find((i) => i.id === id)
+    if (interactivo) {
+      interactivo.activo = false
+      interactivo.visual.disableInteractive()
+      this.tweens.killTweensOf(interactivo.visual)
+      this.tweens.add({ targets: interactivo.visual, alpha: 0, scale: 1.4, duration: 800 })
+    }
+    if (RECUERDOS.includes(id)) {
+      this.recuerdosEncontrados += 1
+      this.ajustarBruma(900)
     }
   }
 
-  private cercaDeMarea() {
-    return (
-      Phaser.Math.Distance.Between(this.jugador.x, this.jugador.y, this.marea.x, this.marea.y) <
-      DISTANCIA_PARA_HABLAR
-    )
-  }
-
-  private hablarConMarea() {
-    this.indicadorMarea.setVisible(false)
-    EventBus.emit('hablar', 'marea')
+  // La Bruma se aclara con cada Recuerdo y desaparece con el faro
+  private ajustarBruma(duracion: number) {
+    const fuerza = this.faroEncendido ? 0 : 1 - this.recuerdosEncontrados * 0.2
+    const brumaAlpha = 0.7 * fuerza
+    const nubesAlpha = fuerza
+    if (duracion === 0) {
+      this.bruma.setAlpha(brumaAlpha / 0.7)
+      this.nubes.forEach((n) => n.setAlpha(nubesAlpha))
+      return
+    }
+    this.tweens.add({ targets: this.bruma, alpha: brumaAlpha / 0.7, duration: duracion })
+    this.tweens.add({ targets: this.nubes, alpha: nubesAlpha, duration: duracion })
   }
 
   private encenderFaro() {
+    if (this.faroEncendido) return
     this.faroEncendido = true
     this.luzFaro.setFillStyle(0xffd54f)
-    this.tweens.add({ targets: [this.bruma, ...this.nubes], alpha: 0, duration: 1500 })
+    this.tweens.add({
+      targets: this.luzFaro,
+      scale: 1.6,
+      duration: 500,
+      yoyo: true,
+      repeat: 2,
+    })
+    this.ajustarBruma(1500)
     EventBus.emit('faro-encendido', 'raices')
   }
 }

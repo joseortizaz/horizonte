@@ -20,8 +20,10 @@ export interface PasoDialogo {
 
 export class Narrativa {
   private historia: Story
+  private nombreCompanero: string
 
-  constructor(estadoGuardado: string | null) {
+  constructor(estadoGuardado: string | null, nombreCompanero: string) {
+    this.nombreCompanero = nombreCompanero
     this.historia = new Compiler(fuente).Compile()
     if (estadoGuardado) {
       try {
@@ -66,7 +68,9 @@ export class Narrativa {
       for (const etiqueta of this.historia.currentTags ?? []) {
         const [clave, ...resto] = etiqueta.split(':')
         const valor = resto.join(':').trim()
-        if (clave.trim() === 'hablante') hablante = valor
+        if (clave.trim() === 'hablante') {
+          hablante = valor === 'companero' ? this.nombreCompanero : valor
+        }
         if (clave.trim() === 'evento') eventos.push(valor)
       }
 

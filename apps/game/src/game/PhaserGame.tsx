@@ -4,7 +4,11 @@ import { PuertoScene } from './scenes/PuertoScene'
 import type { Avatar } from '../avatar/tipos'
 import type { Partida } from '../partida/tipos'
 
-export function PhaserGame({ avatar, partida }: { avatar: Avatar; partida: Partida }) {
+export function PhaserGame({ avatar, partida, resueltos }: {
+  avatar: Avatar
+  partida: Partida
+  resueltos: string[]
+}) {
   const contenedor = useRef<HTMLDivElement>(null)
   const juego = useRef<Phaser.Game | null>(null)
 
@@ -26,6 +30,7 @@ export function PhaserGame({ avatar, partida }: { avatar: Avatar; partida: Parti
         preBoot: (game) => {
           game.registry.set('avatar', avatar)
           game.registry.set('partida', partida)
+          game.registry.set('resueltos', resueltos)
         },
       },
       scene: [PuertoScene],
@@ -35,7 +40,7 @@ export function PhaserGame({ avatar, partida }: { avatar: Avatar; partida: Parti
       juego.current?.destroy(true)
       juego.current = null
     }
-  }, [avatar, partida])
+  }, [avatar, partida, resueltos])
 
   return <div ref={contenedor} className="game-container" />
 }

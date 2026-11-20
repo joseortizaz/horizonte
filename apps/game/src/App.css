@@ -400,3 +400,60 @@
   font-size: 13px;
   font-weight: 700;
 }
+
+/* Líneas de narración (sin personaje que hable) */
+.dialogo-texto.narracion {
+  font-style: italic;
+  color: #d6eaf8;
+}
+
+/* Aviso de insignia ganada */
+.insignia-toast {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border: 2px solid #ffd54f;
+  border-radius: 14px;
+  background: rgba(14, 42, 61, 0.95);
+  color: #ffffff;
+  transform: translateX(-50%);
+  animation: insignia-entrada 0.5s ease-out;
+}
+
+.insignia-toast small {
+  display: block;
+  color: #ffd54f;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.insignia-toast strong {
+  font-size: 18px;
+}
+
+.insignia-medalla {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #cd7f32;
+  color: #ffffff;
+  font-size: 22px;
+}
+
+@keyframes insignia-entrada {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

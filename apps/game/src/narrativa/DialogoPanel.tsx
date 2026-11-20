@@ -40,7 +40,9 @@ export function DialogoPanel({ paso, onElegir, onCerrar }: Props) {
   return (
     <div className="dialogo" role="dialog" aria-live="polite">
       {linea?.hablante && <div className="dialogo-hablante">{linea.hablante}</div>}
-      {linea && <p className="dialogo-texto">{linea.texto}</p>}
+      {linea && (
+        <p className={linea.hablante ? 'dialogo-texto' : 'dialogo-texto narracion'}>{linea.texto}</p>
+      )}
 
       {!esUltima && (
         <button className="dialogo-continuar" onClick={() => setIndice((i) => i + 1)}>
