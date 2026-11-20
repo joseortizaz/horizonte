@@ -17,6 +17,8 @@ import { DialogoPanel } from './narrativa/DialogoPanel'
 import { Bitacora } from './bitacora/Bitacora'
 import { NOMBRES_INSIGNIAS } from './bitacora/contenido'
 import { supabase } from './lib/supabase'
+import { useConsentimiento } from './consentimiento/useConsentimiento'
+import { EsperaConsentimiento } from './consentimiento/EsperaConsentimiento'
 import './App.css'
 
 const GUARDADO_POSICION_MS = 15000
@@ -40,6 +42,7 @@ export default function App() {
 
 // Con sesión iniciada: primero el creador de personaje (si no existe), luego el juego
 function Sesion({ session }: { session: Session }) {
+  const consentimiento = useConsentimiento(session.user.id)
   const {
     avatar,
     cargando: cargandoAvatar,
@@ -60,7 +63,7 @@ function Sesion({ session }: { session: Session }) {
   const [partidaJuego, setPartidaJuego] = useState<Partida | null>(null)
 
   // Sin conexión la primera vez: todavía no hay copia en el dispositivo
-  if (errorAvatar || errorPartida) {
+  if (errorAvatar || errorPartida || consentimiento.error) {
     return (
       <div className="cargando">
         <div className="sin-conexion">
@@ -70,6 +73,7 @@ function Sesion({ session }: { session: Session }) {
             onClick={() => {
               reintentarAvatar()
               reintentarPartida()
+              consentimiento.recargar()
             }}
           >
             Reintentar
@@ -79,8 +83,20 @@ function Sesion({ session }: { session: Session }) {
     )
   }
 
-  if (cargandoAvatar || cargandoPartida || !partidaInicial) {
+  if (cargandoAvatar || cargandoPartida || consentimiento.cargando || !partidaInicial) {
     return <div className="cargando">Cargando…</div>
+  }
+
+  // Menores de 18: esperar la autorización de su madre, padre o tutor
+  if (!consentimiento.puedeJugar && consentimiento.estado) {
+    return (
+      <EsperaConsentimiento
+        userId={session.user.id}
+        nombre={(session.user.user_metadata.display_name as string | undefined) ?? 'Navegante'}
+        estado={consentimiento.estado}
+        onRevisar={consentimiento.recargar}
+      />
+    )
   }
 
   const volverAlJuego = () => {

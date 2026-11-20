@@ -2,10 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { PaginaAutorizacion } from './consentimiento/PaginaAutorizacion'
+
+// La página de autorización para tutores es pública y no usa el juego
+const esAutorizacion = window.location.pathname.startsWith('/autorizacion')
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {esAutorizacion ? <PaginaAutorizacion /> : <App />}
   </StrictMode>,
 )
 
