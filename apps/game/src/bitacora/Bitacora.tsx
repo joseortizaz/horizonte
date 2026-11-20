@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { construirBitacora, NOMBRES_INSIGNIAS } from './contenido'
 import type { LeerVariable } from './contenido'
 import { UnirseAGrupo } from './UnirseAGrupo'
+import { NotaPagina } from './NotaPagina'
+import { PantallaApoyo } from '../riesgo/PantallaApoyo'
 
 interface Props {
   userId: string
@@ -21,6 +23,8 @@ interface Insignia {
 export function Bitacora({ userId, nombre, leer, faros, onCerrar }: Props) {
   const [secciones] = useState(() => construirBitacora(leer))
   const [insignias, setInsignias] = useState<Insignia[]>([])
+  const [notas, setNotas] = useState<Record<string, string> | null>(null)
+  const [apoyo, setApoyo] = useState<'moderado' | 'alto' | null>(null)
   const recuerdos = Number(leer('recuerdos') ?? 0)
   const descubiertas = secciones.filter((s) => s.descubierta).length
 
@@ -34,6 +38,17 @@ export function Bitacora({ userId, nombre, leer, faros, onCerrar }: Props) {
       .then(({ data }) => {
         if (activo && data) setInsignias(data as Insignia[])
       })
+    supabase
+      .from('bitacora_notas')
+      .select('seccion, texto')
+      .eq('profile_id', userId)
+      .then(({ data }) => {
+        if (!activo) return
+        const mapa: Record<string, string> = {}
+        for (const fila of data ?? []) mapa[fila.seccion as string] = fila.texto as string
+        setNotas(mapa)
+      })
+
     return () => {
       activo = false
     }
@@ -42,11 +57,11 @@ export function Bitacora({ userId, nombre, leer, faros, onCerrar }: Props) {
   // Cerrar con Escape
   useEffect(() => {
     const alPulsar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCerrar()
+      if (e.key === 'Escape' && !apoyo) onCerrar()
     }
     window.addEventListener('keydown', alPulsar)
     return () => window.removeEventListener('keydown', alPulsar)
-  }, [onCerrar])
+  }, [onCerrar, apoyo])
 
   return (
     <div className="bitacora-fondo" role="dialog" aria-label="Bitácora">
@@ -81,6 +96,11 @@ export function Bitacora({ userId, nombre, leer, faros, onCerrar }: Props) {
           </div>
         </section>
 
+        <p className="bitacora-privacidad">
+          Tus notas son privadas: tu orientador no puede leerlas. Solo si escribes algo que nos haga pensar
+          que tu seguridad está en riesgo, una persona adulta del equipo lo leerá para poder ayudarte.
+        </p>
+
         <div className="bitacora-paginas">
           {secciones.map((s) =>
             s.descubierta ? (
@@ -97,6 +117,9 @@ export function Bitacora({ userId, nombre, leer, faros, onCerrar }: Props) {
                   </ul>
                 )}
                 {s.nota && <p className="bitacora-nota">{s.nota}</p>}
+                {notas && (
+                  <NotaPagina seccion={s.id} inicial={notas[s.id] ?? ''} onRiesgo={setApoyo} />
+                )}
               </section>
             ) : (
               <section key={s.id} className="bitacora-pagina bloqueada">
@@ -136,6 +159,7 @@ export function Bitacora({ userId, nombre, leer, faros, onCerrar }: Props) {
           evaluación. Puedes compartirla con quien tú decidas.
         </p>
       </article>
+      {apoyo && <PantallaApoyo nivel={apoyo} onCerrar={() => setApoyo(null)} />}
     </div>
   )
 }

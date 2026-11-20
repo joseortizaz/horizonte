@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { AlertasPanel } from './AlertasPanel'
 
 interface Grupo {
   id: string
@@ -129,6 +130,8 @@ export function PanelOrientador({ nombre }: { nombre: string }) {
       </header>
 
       {error && <p className="auth-error">{error}</p>}
+
+      <AlertasPanel />
 
       <section className="panel-grupos">
         <div className="panel-titulo-seccion">
@@ -290,8 +293,8 @@ export function PanelOrientador({ nombre }: { nombre: string }) {
 
           <p className="bitacora-pie">
             Por privacidad, este panel muestra solo el avance. Las respuestas de los jóvenes y su Bitácora
-            son personales: cada joven decide si las comparte. Las alertas de bienestar se activarán cuando
-            esté listo el protocolo de detección de riesgo.
+            son personales: cada joven decide si las comparte. La única excepción son las alertas de
+            bienestar, que aparecen arriba.
           </p>
         </section>
       )}

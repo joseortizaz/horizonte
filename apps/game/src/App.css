@@ -1218,3 +1218,271 @@ body:has(.panel) {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* Notas de la Bitácora */
+.bitacora-privacidad {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #eaf2f8;
+  color: #1b4f72;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.nota-pagina {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #e8dcc4;
+}
+
+.nota-pagina label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8a6d3b;
+}
+
+.nota-pagina textarea,
+.alerta-atender textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccd1d1;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  color: #1c2833;
+  resize: vertical;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.nota-acciones {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  min-height: 8px;
+  margin-top: 6px;
+}
+
+.nota-estado {
+  font-size: 13px;
+  color: #1e8449;
+}
+
+.nota-estado.error {
+  color: #922b21;
+}
+
+/* Pantalla de apoyo */
+.apoyo-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+  background: rgba(14, 42, 61, 0.85);
+}
+
+.apoyo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+  padding: 24px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #1c2833;
+  font-family: system-ui, sans-serif;
+}
+
+.apoyo h2 {
+  margin: 0;
+  color: #0e2a3d;
+}
+
+.apoyo p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.apoyo-emergencia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fdedec;
+  color: #922b21;
+  font-weight: 600;
+}
+
+.apoyo-subtitulo {
+  font-weight: 600;
+}
+
+.apoyo-recursos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.apoyo-recursos li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e5e8e8;
+  border-radius: 10px;
+}
+
+.apoyo-recursos span {
+  display: block;
+  font-size: 14px;
+  color: #5d6d7e;
+}
+
+.apoyo-boton {
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #1b4f72;
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.apoyo-boton.urgente {
+  background: #c0392b;
+}
+
+.apoyo-nota {
+  font-size: 14px;
+  color: #5d6d7e;
+}
+
+/* Alertas en el panel de orientadores */
+.alertas {
+  margin-top: 8px;
+}
+
+.alertas.hay-nuevas .panel-titulo-seccion h2 {
+  color: #922b21;
+}
+
+.alertas-contador {
+  margin-left: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #c0392b;
+  color: #ffffff;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.alertas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alerta {
+  padding: 14px 16px;
+  border: 1px solid #e8dcc4;
+  border-left: 5px solid #f5b041;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.alerta.alto {
+  border-left-color: #c0392b;
+}
+
+.alerta.atendida {
+  opacity: 0.75;
+}
+
+.alerta header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.alerta-nivel {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #fef5e7;
+  color: #b9770e;
+}
+
+.alerta-nivel.alto {
+  background: #fdedec;
+  color: #922b21;
+}
+
+.alerta-grupo,
+.alerta-fecha {
+  font-size: 13px;
+  color: #7f8c8d;
+}
+
+.alerta blockquote {
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border-left: 3px solid #e8dcc4;
+  background: #fdfaf3;
+  font-style: italic;
+}
+
+.alerta-atender {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.alerta-atender textarea {
+  flex: 1 1 300px;
+  font-size: 14px;
+}
+
+.alerta-seguimiento {
+  margin: 0;
+  font-size: 14px;
+  color: #1e8449;
+}
+
+.alertas-guia {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fef5ec;
+  border: 1px solid #e67e22;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+@media print {
+  .nota-acciones,
+  .bitacora-privacidad {
+    display: none;
+  }
+}
