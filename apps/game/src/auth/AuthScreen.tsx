@@ -30,6 +30,10 @@ export function AuthScreen() {
   const [nacimiento, setNacimiento] = useState('')
   const [correo, setCorreo] = useState('')
   const [clave, setClave] = useState('')
+  // Código del centro educativo (opcional). También puede venir en el enlace: ?codigo=ABC123
+  const [codigo, setCodigo] = useState(
+    () => new URLSearchParams(window.location.search).get('codigo')?.toUpperCase() ?? ''
+  )
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -49,6 +53,10 @@ export function AuthScreen() {
         return setError(`Horizonte es para personas de ${EDAD_MINIMA} años en adelante.`)
       }
       if (clave.length < 8) return setError('La contraseña debe tener al menos 8 caracteres.')
+      if (codigo.trim()) {
+        const { data: grupo } = await supabase.rpc('validar_codigo_grupo', { p_codigo: codigo.trim() })
+        if (!grupo) return setError('Ese código de centro no existe. Revísalo o déjalo en blanco.')
+      }
     }
 
     setEnviando(true)
@@ -61,7 +69,11 @@ export function AuthScreen() {
         email: correo,
         password: clave,
         options: {
-          data: { display_name: nombre.trim(), birth_date: nacimiento },
+          data: {
+            display_name: nombre.trim(),
+            birth_date: nacimiento,
+            codigo_grupo: codigo.trim().toUpperCase(),
+          },
           emailRedirectTo: window.location.origin,
         },
       })
@@ -93,6 +105,16 @@ export function AuthScreen() {
             <label>
               Fecha de nacimiento
               <input type="date" value={nacimiento} onChange={(e) => setNacimiento(e.target.value)} />
+            </label>
+            <label>
+              Código de tu centro (opcional)
+              <input
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                maxLength={6}
+                placeholder="Si tu orientador te dio uno"
+                autoCapitalize="characters"
+              />
             </label>
             {esMenor && (
               <p className="auth-nota">

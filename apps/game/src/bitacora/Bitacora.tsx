@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { construirBitacora, NOMBRES_INSIGNIAS } from './contenido'
 import type { LeerVariable } from './contenido'
+import { UnirseAGrupo } from './UnirseAGrupo'
 
 interface Props {
   userId: string
@@ -127,6 +128,8 @@ export function Bitacora({ userId, nombre, leer, faros, onCerrar }: Props) {
             </ul>
           )}
         </section>
+
+        <UnirseAGrupo />
 
         <p className="bitacora-pie">
           Esta Bitácora es tuya. Refleja lo que elegiste en el juego, no es un diagnóstico ni una

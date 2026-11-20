@@ -3,13 +3,16 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { PaginaAutorizacion } from './consentimiento/PaginaAutorizacion'
+import { PanelApp } from './panel/PanelApp'
 
 // La página de autorización para tutores es pública y no usa el juego
 const esAutorizacion = window.location.pathname.startsWith('/autorizacion')
+// El panel de orientadores vive en /orientador
+const esPanel = window.location.pathname.startsWith('/orientador')
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {esAutorizacion ? <PaginaAutorizacion /> : <App />}
+    {esAutorizacion ? <PaginaAutorizacion /> : esPanel ? <PanelApp /> : <App />}
   </StrictMode>,
 )
 
