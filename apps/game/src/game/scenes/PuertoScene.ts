@@ -1,21 +1,31 @@
 import * as Phaser from 'phaser'
 import { EventBus } from '../EventBus'
+import { avatarSvg, companeroSvg, svgADataUri } from '../../avatar/dibujo'
+import type { Avatar } from '../../avatar/tipos'
 
 const VELOCIDAD = 220
 
 export class PuertoScene extends Phaser.Scene {
-  private jugador!: Phaser.GameObjects.Arc
+  private jugador!: Phaser.GameObjects.Image
+  private companero!: Phaser.GameObjects.Image
   private faro!: Phaser.GameObjects.Rectangle
   private luzFaro!: Phaser.GameObjects.Arc
   private bruma!: Phaser.GameObjects.Rectangle
+  private nubes: Phaser.GameObjects.Ellipse[] = []
   private flechas!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
   private destino: Phaser.Math.Vector2 | null = null
   private faroEncendido = false
-  private nubes: Phaser.GameObjects.Ellipse[] = []
 
   constructor() {
     super('PuertoScene')
+  }
+
+  preload() {
+    // El personaje creado por el usuario se convierte en imágenes del juego
+    const avatar = this.registry.get('avatar') as Avatar
+    this.load.image('avatar', svgADataUri(avatarSvg(avatar.apariencia)))
+    this.load.image('companero', svgADataUri(companeroSvg(avatar.companero)))
   }
 
   create() {
@@ -31,10 +41,11 @@ export class PuertoScene extends Phaser.Scene {
     this.luzFaro = this.add.circle(this.faro.x, this.faro.y - 40, 12, 0x555555)
     this.luzFaro.setDepth(10)
 
-    // Personaje del jugador
-    this.jugador = this.add.circle(width * 0.3, height * 0.6, 14, 0xe67e22)
-    this.jugador.setStrokeStyle(3, 0xffffff)
-    this.jugador.setDepth(10)
+    // Personaje del jugador y su compañero
+    this.jugador = this.add.image(width * 0.3, height * 0.6, 'avatar').setDepth(10)
+    this.companero = this.add
+      .image(this.jugador.x - 34, this.jugador.y - 30, 'companero')
+      .setDepth(11)
 
     // La Bruma: una capa densa y nubes que se mueven lentamente
     this.bruma = this.add.rectangle(0, 0, width, height, 0xdfe6ec, 0.7)
@@ -79,7 +90,7 @@ export class PuertoScene extends Phaser.Scene {
     })
   }
 
-  update(_time: number, delta: number) {
+  update(time: number, delta: number) {
     const dt = delta / 1000
     let dx = 0
     let dy = 0
@@ -113,8 +124,14 @@ export class PuertoScene extends Phaser.Scene {
     }
 
     // Mantener al jugador dentro de la pantalla
-    this.jugador.x = Phaser.Math.Clamp(this.jugador.x, 14, this.scale.width - 14)
-    this.jugador.y = Phaser.Math.Clamp(this.jugador.y, 14, this.scale.height - 14)
+    this.jugador.x = Phaser.Math.Clamp(this.jugador.x, 32, this.scale.width - 32)
+    this.jugador.y = Phaser.Math.Clamp(this.jugador.y, 40, this.scale.height - 40)
+
+    // El compañero sigue al jugador flotando suavemente
+    const suavidad = Math.min(1, dt * 4)
+    const flotar = Math.sin(time / 300) * 4
+    this.companero.x += (this.jugador.x - 34 - this.companero.x) * suavidad
+    this.companero.y += (this.jugador.y - 30 + flotar - this.companero.y) * suavidad
 
     // ¿Llegó al faro?
     if (!this.faroEncendido) {

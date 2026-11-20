@@ -145,3 +145,168 @@
   background: #e9f7ef;
   color: #1e8449;
 }
+
+/* Creador de personaje */
+.creador {
+  min-height: 100vh;
+  padding: 24px;
+  background: linear-gradient(180deg, #0e2a3d 0%, #1b4f72 100%);
+  font-family: system-ui, sans-serif;
+}
+
+.creador-card {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 28px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #1c2833;
+}
+
+.creador-card h1 {
+  margin: 0;
+  color: #0e2a3d;
+}
+
+.creador-card h2 {
+  margin: 28px 0 12px;
+  font-size: 18px;
+  color: #0e2a3d;
+}
+
+.creador-card h3 {
+  margin: 16px 0 8px;
+  font-size: 14px;
+}
+
+.creador-sub {
+  margin: 4px 0 20px;
+  color: #5d6d7e;
+}
+
+.creador-cuerpo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+}
+
+.creador-vista {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 220px;
+}
+
+.creador-escenario {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 220px;
+  height: 260px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #d6eaf8 0%, #c9a66b 100%);
+}
+
+.creador-companero {
+  position: absolute;
+  top: 24px;
+  left: 16px;
+}
+
+.creador-opciones {
+  flex: 1 1 320px;
+}
+
+.creador-opciones h3:first-child {
+  margin-top: 0;
+}
+
+.muestras,
+.opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.muestra {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #ccd1d1;
+  cursor: pointer;
+}
+
+.muestra.activa {
+  box-shadow: 0 0 0 3px #1b4f72;
+}
+
+.opcion {
+  padding: 8px 14px;
+  border: 1px solid #ccd1d1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1c2833;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.opcion.activa {
+  border-color: #1b4f72;
+  background: #1b4f72;
+  color: #ffffff;
+}
+
+.companeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.companero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px;
+  border: 2px solid #e5e8e8;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1c2833;
+  text-align: center;
+  cursor: pointer;
+}
+
+.companero span {
+  font-size: 13px;
+  color: #5d6d7e;
+}
+
+.companero.activo {
+  border-color: #e67e22;
+  background: #fef5ec;
+}
+
+.creador-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.creador-guardar {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  background: #e67e22;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.creador-guardar:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
