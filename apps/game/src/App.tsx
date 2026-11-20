@@ -14,14 +14,12 @@ import type { Partida, Posicion } from './partida/tipos'
 import { Narrativa } from './narrativa/motor'
 import type { PasoDialogo } from './narrativa/motor'
 import { DialogoPanel } from './narrativa/DialogoPanel'
+import { Bitacora } from './bitacora/Bitacora'
+import { NOMBRES_INSIGNIAS } from './bitacora/contenido'
 import { supabase } from './lib/supabase'
 import './App.css'
 
 const GUARDADO_POSICION_MS = 15000
-
-const NOMBRES_INSIGNIAS: Record<string, string> = {
-  autoconocimiento: 'Autoconocimiento',
-}
 
 // Qué variables de la historia indican que algo de la isla ya quedó resuelto
 const RESUELTOS: Record<string, string> = {
@@ -114,6 +112,19 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
   const [dialogo, setDialogo] = useState<{ paso: PasoDialogo; id: number } | null>(null)
   const dialogoAbierto = useRef(false)
   const contadorPasos = useRef(0)
+
+  const [bitacoraAbierta, setBitacoraAbierta] = useState(false)
+
+  const abrirBitacora = () => {
+    if (dialogoAbierto.current) return
+    EventBus.emit('pausar')
+    setBitacoraAbierta(true)
+  }
+
+  const cerrarBitacora = useCallback(() => {
+    setBitacoraAbierta(false)
+    EventBus.emit('reanudar')
+  }, [])
 
   const otorgarInsignia = useCallback(
     (cualidad: string) => {
@@ -241,6 +252,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
         <span>Faros encendidos: {faros} / 7</span>
         <span className="hud-usuario">
           {nombre}
+          <button onClick={abrirBitacora}>Bitácora</button>
           <button onClick={onEditarPersonaje}>Personaje</button>
           <button onClick={() => supabase.auth.signOut()}>Salir</button>
         </span>
@@ -266,6 +278,15 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
         )}
       </div>
       <p className="mensaje">{mensaje}</p>
+      {bitacoraAbierta && (
+        <Bitacora
+          userId={session.user.id}
+          nombre={nombre}
+          leer={(variable) => narrativa.leerVariable(variable)}
+          faros={faros}
+          onCerrar={cerrarBitacora}
+        />
+      )}
     </div>
   )
 }

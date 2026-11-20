@@ -209,12 +209,17 @@ export class PuertoScene extends Phaser.Scene {
 
     EventBus.on('dialogo-abierto', alAbrirDialogo)
     EventBus.on('dialogo-cerrado', alCerrarDialogo)
+    // Pausa por otras pantallas (por ejemplo, la Bitácora)
+    EventBus.on('pausar', alAbrirDialogo)
+    EventBus.on('reanudar', alCerrarDialogo)
     EventBus.on('resolver', alResolver)
     EventBus.on('encender-faro', alEncenderFaro)
 
     const limpiar = () => {
       EventBus.off('dialogo-abierto', alAbrirDialogo)
       EventBus.off('dialogo-cerrado', alCerrarDialogo)
+      EventBus.off('pausar', alAbrirDialogo)
+      EventBus.off('reanudar', alCerrarDialogo)
       EventBus.off('resolver', alResolver)
       EventBus.off('encender-faro', alEncenderFaro)
     }
