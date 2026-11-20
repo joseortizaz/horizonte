@@ -2,6 +2,10 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  user-select: none;
+  -webkit-user-select: none;
   background: #0e2a3d;
   color: #ffffff;
   font-family: system-ui, sans-serif;
@@ -16,6 +20,8 @@
 .game-container {
   flex: 1;
   min-height: 0;
+  /* Los gestos del dedo mueven al personaje, no la página */
+  touch-action: none;
 }
 
 .mensaje {
@@ -664,5 +670,190 @@
 
   .bitacora-acciones {
     display: none;
+  }
+}
+
+
+/* Pantalla sin conexión */
+.sin-conexion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 320px;
+  padding: 24px;
+  text-align: center;
+}
+
+/* Botones que solo tienen sentido en pantallas táctiles */
+.solo-tactil {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .solo-tactil {
+    display: inline-block;
+  }
+}
+
+/* Aviso para girar el teléfono: solo en pantallas táctiles en vertical */
+.girar {
+  display: none;
+}
+
+@media (pointer: coarse) and (orientation: portrait) {
+  .girar {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 32px;
+    background: #0e2a3d;
+    color: #ffffff;
+    text-align: center;
+    font-family: system-ui, sans-serif;
+  }
+}
+
+.girar h2 {
+  margin: 0;
+}
+
+.girar p {
+  margin: 0 0 8px;
+  color: #d6eaf8;
+}
+
+.girar-seguir {
+  border: none;
+  background: none;
+  color: #d6eaf8;
+  font-size: 15px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.girar-telefono {
+  width: 56px;
+  height: 92px;
+  margin-bottom: 8px;
+  border: 4px solid #ffd54f;
+  border-radius: 12px;
+  animation: girar-telefono 2.4s ease-in-out infinite;
+}
+
+@keyframes girar-telefono {
+  0%, 20% {
+    transform: rotate(0deg);
+  }
+  50%, 80% {
+    transform: rotate(-90deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* Botones de opciones: tamaño cómodo para el dedo */
+.dialogo-opciones button,
+.dialogo-continuar {
+  min-height: 44px;
+}
+
+/* Pantallas pequeñas o teléfono en horizontal (poca altura) */
+@media (max-width: 700px), (max-height: 500px) {
+  .hud {
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .hud-largo,
+  .hud-nombre {
+    display: none;
+  }
+
+  .hud-usuario {
+    gap: 6px;
+  }
+
+  .hud-usuario button {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .mensaje {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
+
+@media (max-height: 500px) {
+  .dialogo {
+    bottom: 8px;
+    max-height: calc(100% - 16px);
+    overflow-y: auto;
+    padding: 10px 14px;
+  }
+
+  .dialogo-hablante {
+    margin-bottom: 4px;
+  }
+
+  .dialogo-texto {
+    margin-bottom: 8px;
+    font-size: 15px;
+  }
+
+  .dialogo-opciones {
+    gap: 6px;
+  }
+
+  .dialogo-opciones button {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .insignia-toast {
+    top: 8px;
+    padding: 8px 14px;
+  }
+}
+
+/* Creador de personaje y Bitácora en pantallas pequeñas */
+@media (max-width: 600px) {
+  .creador,
+  .bitacora-fondo {
+    padding: 10px;
+  }
+
+  .creador-card,
+  .bitacora {
+    padding: 18px;
+  }
+
+  .creador-vista {
+    flex-basis: 100%;
+  }
+
+  .bitacora-acciones {
+    width: 100%;
+  }
+
+  .bitacora-acciones button {
+    flex: 1;
+  }
+
+  .bitacora-progreso strong {
+    font-size: 18px;
+  }
+
+  .bitacora-paginas {
+    grid-template-columns: 1fr;
   }
 }

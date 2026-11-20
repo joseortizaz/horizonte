@@ -8,6 +8,8 @@ import type { Partida } from '../../partida/tipos'
 const VELOCIDAD = 220
 const AVISO_POSICION_MS = 5000
 const RECUERDOS = ['concha', 'huella', 'semilla']
+// En pantallas táctiles los textos de ayuda hablan de tocar, no de teclas
+const ES_TACTIL = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
 // Algo con lo que el jugador puede interactuar: una persona, un objeto o el faro
 interface Interactivo {
@@ -31,6 +33,7 @@ export class PuertoScene extends Phaser.Scene {
   private bruma!: Phaser.GameObjects.Rectangle
   private nubes: Phaser.GameObjects.Ellipse[] = []
   private interactivos: Interactivo[] = []
+  private cercanoActual: Interactivo | null = null
   private flechas!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
   private teclaHablar!: Phaser.Input.Keyboard.Key
@@ -127,16 +130,25 @@ export class PuertoScene extends Phaser.Scene {
 
     // Aviso que aparece sobre lo que está cerca
     this.avisoInteractuar = this.add
-      .text(0, 0, 'Pulsa E o toca para interactuar', {
+      .text(0, 0, ES_TACTIL ? 'Toca aquí para interactuar' : 'Pulsa E o toca para interactuar', {
         fontFamily: 'sans-serif',
         fontSize: '14px',
         color: '#ffffff',
         backgroundColor: '#1c2833cc',
-        padding: { x: 8, y: 4 },
+        padding: ES_TACTIL ? { x: 12, y: 8 } : { x: 8, y: 4 },
       })
       .setOrigin(0.5)
       .setDepth(20)
       .setVisible(false)
+      .setInteractive({ useHandCursor: true })
+
+    // Tocar el aviso también sirve para interactuar (más fácil en el teléfono)
+    this.avisoInteractuar.on('pointerdown', () => {
+      if (this.enDialogo || !this.cercanoActual) return
+      this.ignorarToque = true
+      this.destino = null
+      this.interactuar(this.cercanoActual)
+    })
 
     // Personaje del jugador y su compañero
     const inicio = partida.posicion ?? { x: width * 0.3, y: height * 0.6 }
@@ -193,6 +205,7 @@ export class PuertoScene extends Phaser.Scene {
         return
       }
       this.destino = new Phaser.Math.Vector2(p.worldX, p.worldY)
+      this.marcarDestino(p.worldX, p.worldY)
     })
 
     // Mensajes que llegan desde React (la historia)
@@ -282,6 +295,7 @@ export class PuertoScene extends Phaser.Scene {
 
     // ¿Hay algo cerca con qué interactuar?
     const cercano = this.interactivoCercano()
+    this.cercanoActual = cercano
     const pidioInteractuar =
       Phaser.Input.Keyboard.JustDown(this.teclaHablar) ||
       Phaser.Input.Keyboard.JustDown(this.teclaEspacio)
@@ -323,8 +337,14 @@ export class PuertoScene extends Phaser.Scene {
     }
     this.interactivos.push(interactivo)
 
-    // Tocarlo: si está cerca, interactúa; si no, el jugador camina hacia allá
-    visual.setInteractive({ useHandCursor: true })
+    // Tocarlo: si está cerca, interactúa; si no, el jugador camina hacia allá.
+    // Las imágenes tienen un área de toque más grande que el dibujo, para los dedos.
+    if (visual instanceof Phaser.GameObjects.Image) {
+      const area = new Phaser.Geom.Circle(visual.width / 2, visual.height / 2, 40)
+      visual.setInteractive({ hitArea: area, hitAreaCallback: Phaser.Geom.Circle.Contains, useHandCursor: true })
+    } else {
+      visual.setInteractive({ useHandCursor: true })
+    }
     visual.on('pointerdown', () => {
       if (this.enDialogo || !interactivo.activo) return
       if (this.distanciaA(interactivo) < interactivo.radio) {
@@ -347,6 +367,18 @@ export class PuertoScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     })
     this.agregarInteractivo(id, `recuerdo_${id}`, objeto, 55, false)
+  }
+
+  // Un pequeño anillo donde el jugador tocó, para que sepa hacia dónde camina
+  private marcarDestino(x: number, y: number) {
+    const anillo = this.add.circle(x, y, 10).setStrokeStyle(2, 0xffffff, 0.9).setDepth(8)
+    this.tweens.add({
+      targets: anillo,
+      scale: 2,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => anillo.destroy(),
+    })
   }
 
   private interactivoCercano() {

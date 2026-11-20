@@ -8,3 +8,10 @@ body,
   margin: 0;
   height: 100%;
 }
+
+body {
+  /* Evita el rebote y el resaltado azul al tocar en el teléfono */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  background: #0e2a3d;
+}

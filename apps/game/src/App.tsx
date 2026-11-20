@@ -40,11 +40,44 @@ export default function App() {
 
 // Con sesión iniciada: primero el creador de personaje (si no existe), luego el juego
 function Sesion({ session }: { session: Session }) {
-  const { avatar, cargando: cargandoAvatar, guardar: guardarAvatar } = useAvatar(session.user.id)
-  const { partidaInicial, cargando: cargandoPartida, guardar, actual } = usePartida(session.user.id)
+  const {
+    avatar,
+    cargando: cargandoAvatar,
+    error: errorAvatar,
+    reintentar: reintentarAvatar,
+    guardar: guardarAvatar,
+  } = useAvatar(session.user.id)
+  const {
+    partidaInicial,
+    cargando: cargandoPartida,
+    error: errorPartida,
+    reintentar: reintentarPartida,
+    guardar,
+    actual,
+  } = usePartida(session.user.id)
   const [editando, setEditando] = useState(false)
   // Al volver del editor, el juego arranca con la partida más reciente
   const [partidaJuego, setPartidaJuego] = useState<Partida | null>(null)
+
+  // Sin conexión la primera vez: todavía no hay copia en el dispositivo
+  if (errorAvatar || errorPartida) {
+    return (
+      <div className="cargando">
+        <div className="sin-conexion">
+          <p>No pudimos cargar tu partida. Revisa tu conexión a internet.</p>
+          <button
+            className="creador-guardar"
+            onClick={() => {
+              reintentarAvatar()
+              reintentarPartida()
+            }}
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (cargandoAvatar || cargandoPartida || !partidaInicial) {
     return <div className="cargando">Cargando…</div>
@@ -78,6 +111,26 @@ function Sesion({ session }: { session: Session }) {
       onEditarPersonaje={() => setEditando(true)}
     />
   )
+}
+
+// Pantalla completa y orientación horizontal (Android; en iPhone se logra instalando la app)
+const puedePantallaCompleta =
+  typeof document !== 'undefined' && Boolean(document.documentElement.requestFullscreen)
+
+async function alternarPantallaCompleta() {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+      return
+    }
+    await document.documentElement.requestFullscreen()
+    const orientacion = screen.orientation as ScreenOrientation & {
+      lock?: (orientacion: string) => Promise<void>
+    }
+    await orientacion.lock?.('landscape')
+  } catch {
+    // Algunos navegadores no permiten bloquear la orientación: no pasa nada
+  }
 }
 
 function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }: {
@@ -114,6 +167,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
   const contadorPasos = useRef(0)
 
   const [bitacoraAbierta, setBitacoraAbierta] = useState(false)
+  const [seguirEnVertical, setSeguirEnVertical] = useState(false)
 
   const abrirBitacora = () => {
     if (dialogoAbierto.current) return
@@ -248,10 +302,17 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
   return (
     <div className="app">
       <header className="hud">
-        <strong>Horizonte</strong>
-        <span>Faros encendidos: {faros} / 7</span>
+        <strong className="hud-titulo">Horizonte</strong>
+        <span>
+          Faros<span className="hud-largo"> encendidos</span>: {faros} / 7
+        </span>
         <span className="hud-usuario">
-          {nombre}
+          <span className="hud-nombre">{nombre}</span>
+          {puedePantallaCompleta && (
+            <button className="solo-tactil" onClick={alternarPantallaCompleta} aria-label="Pantalla completa">
+              ⛶
+            </button>
+          )}
           <button onClick={abrirBitacora}>Bitácora</button>
           <button onClick={onEditarPersonaje}>Personaje</button>
           <button onClick={() => supabase.auth.signOut()}>Salir</button>
@@ -278,6 +339,24 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
         )}
       </div>
       <p className="mensaje">{mensaje}</p>
+
+      {/* En el teléfono en vertical: sugerir girarlo */}
+      {!seguirEnVertical && (
+        <div className="girar" role="dialog" aria-label="Gira tu teléfono">
+          <div className="girar-telefono" aria-hidden="true" />
+          <h2>Gira tu teléfono</h2>
+          <p>Horizonte se disfruta mejor en horizontal.</p>
+          {puedePantallaCompleta && (
+            <button className="creador-guardar" onClick={() => void alternarPantallaCompleta()}>
+              Jugar en pantalla completa
+            </button>
+          )}
+          <button className="girar-seguir" onClick={() => setSeguirEnVertical(true)}>
+            Seguir en vertical
+          </button>
+        </div>
+      )}
+
       {bitacoraAbierta && (
         <Bitacora
           userId={session.user.id}
