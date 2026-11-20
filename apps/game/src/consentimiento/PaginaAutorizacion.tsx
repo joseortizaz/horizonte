@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
-import { CONTACTO_PROYECTO, QUE_DATOS, QUE_ES, SUS_DERECHOS } from './legal'
+import { CONTACTO_PROYECTO, QUE_DATOS, QUE_ES, SEGURIDAD, SUS_DERECHOS, USO_TELEFONO } from './legal'
 
 type Etapa = 'cargando' | 'invalido' | 'respondido' | 'formulario' | 'enviado'
 
@@ -15,6 +15,7 @@ export function PaginaAutorizacion() {
   const [resultado, setResultado] = useState<'aceptado' | 'rechazado' | null>(null)
   const [nombre, setNombre] = useState('')
   const [relacion, setRelacion] = useState(RELACIONES[0])
+  const [telefono, setTelefono] = useState('')
   const [declara, setDeclara] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
@@ -44,6 +45,9 @@ export function PaginaAutorizacion() {
     e?.preventDefault()
     setError('')
     if (!nombre.trim()) return setError('Escribe tu nombre completo.')
+    if (acepta && telefono.replace(/\D/g, '').length < 10) {
+      return setError('Escribe un teléfono de contacto válido (10 dígitos).')
+    }
     if (acepta && !declara) return setError('Marca la casilla de declaración para poder autorizar.')
 
     setEnviando(true)
@@ -51,6 +55,7 @@ export function PaginaAutorizacion() {
       p_token: token,
       p_nombre: nombre.trim(),
       p_relacion: relacion,
+      p_telefono: telefono,
       p_acepta: acepta,
     })
     setEnviando(false)
@@ -105,6 +110,13 @@ export function PaginaAutorizacion() {
               ))}
             </ul>
 
+            <h2>Su seguridad</h2>
+            <ul>
+              {SEGURIDAD.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+
             <h2>Tus derechos</h2>
             <ul>
               {SUS_DERECHOS.map((t) => (
@@ -124,6 +136,18 @@ export function PaginaAutorizacion() {
                   <option key={r}>{r}</option>
                 ))}
               </select>
+            </label>
+            <label>
+              Teléfono de contacto
+              <input
+                type="tel"
+                inputMode="tel"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                placeholder="809-000-0000"
+                maxLength={20}
+              />
+              <small className="autorizacion-ayuda">{USO_TELEFONO}</small>
             </label>
             <label className="autorizacion-declara">
               <input type="checkbox" checked={declara} onChange={(e) => setDeclara(e.target.checked)} />

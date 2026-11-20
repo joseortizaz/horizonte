@@ -38,7 +38,10 @@ export function AuthScreen() {
   const [aviso, setAviso] = useState('')
   const [enviando, setEnviando] = useState(false)
 
+  const [contactoNombre, setContactoNombre] = useState('')
+  const [contactoTelefono, setContactoTelefono] = useState('')
   const edad = nacimiento ? calcularEdad(nacimiento) : null
+  const esAdulto = edad !== null && edad >= 18
   const esMenor = edad !== null && edad >= EDAD_MINIMA && edad < 18
 
   async function enviar(e: FormEvent) {
@@ -73,6 +76,8 @@ export function AuthScreen() {
             display_name: nombre.trim(),
             birth_date: nacimiento,
             codigo_grupo: codigo.trim().toUpperCase(),
+            contacto_nombre: esAdulto ? contactoNombre.trim() : '',
+            contacto_telefono: esAdulto ? contactoTelefono.trim() : '',
           },
           emailRedirectTo: window.location.origin,
         },
@@ -116,6 +121,34 @@ export function AuthScreen() {
                 autoCapitalize="characters"
               />
             </label>
+            {esAdulto && (
+              <fieldset className="auth-contacto">
+                <legend>Una persona de confianza (opcional)</legend>
+                <p className="auth-nota">
+                  Solo la contactaríamos si tuviéramos una preocupación seria por tu seguridad.
+                </p>
+                <label>
+                  Nombre y relación contigo
+                  <input
+                    value={contactoNombre}
+                    onChange={(e) => setContactoNombre(e.target.value)}
+                    placeholder="Ej.: Laura, mi hermana"
+                    maxLength={120}
+                  />
+                </label>
+                <label>
+                  Teléfono
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    value={contactoTelefono}
+                    onChange={(e) => setContactoTelefono(e.target.value)}
+                    placeholder="809-000-0000"
+                    maxLength={20}
+                  />
+                </label>
+              </fieldset>
+            )}
             {esMenor && (
               <p className="auth-nota">
                 Como tienes menos de 18 años, más adelante te pediremos la autorización de tu madre,

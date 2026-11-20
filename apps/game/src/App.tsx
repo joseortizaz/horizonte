@@ -19,6 +19,7 @@ import { NOMBRES_INSIGNIAS } from './bitacora/contenido'
 import { supabase } from './lib/supabase'
 import { useConsentimiento } from './consentimiento/useConsentimiento'
 import { EsperaConsentimiento } from './consentimiento/EsperaConsentimiento'
+import { MensajesAcompanamiento } from './riesgo/MensajesAcompanamiento'
 import './App.css'
 
 const GUARDADO_POSICION_MS = 15000
@@ -355,6 +356,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
         )}
       </div>
       <p className="mensaje">{mensaje}</p>
+      <MensajesAcompanamiento />
 
       {/* En el teléfono en vertical: sugerir girarlo */}
       {!seguirEnVertical && (

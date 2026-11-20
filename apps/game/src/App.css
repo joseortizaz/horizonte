@@ -1486,3 +1486,144 @@ body:has(.panel) {
     display: none;
   }
 }
+
+/* Contacto en el registro y en la autorización */
+.auth-contacto {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e5e8e8;
+  border-radius: 10px;
+}
+
+.auth-contacto legend {
+  padding: 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.autorizacion-ayuda {
+  font-weight: 400;
+  color: #5d6d7e;
+  line-height: 1.4;
+}
+
+/* Mensaje del orientador */
+.mensaje-orientador .bitacora-antetitulo {
+  margin: 0;
+}
+
+.mensaje-texto {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #eaf2f8;
+  font-size: 17px;
+}
+
+/* Ficha de alerta */
+.alerta-categoria {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #f4f6f7;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.alerta-abuso {
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fdedec;
+  color: #78281f;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.alerta-contacto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 10px 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8f9f9;
+}
+
+.alerta-contacto > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.alerta-contacto small {
+  font-weight: 400;
+  color: #7f8c8d;
+}
+
+.alerta-etiqueta {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8a6d3b;
+}
+
+.alerta-botones {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.alerta-botones .apoyo-boton {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+.apoyo-boton.whatsapp {
+  background: #25a35a;
+}
+
+.alerta-acciones {
+  margin: 10px 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.alerta-acciones div {
+  color: #5d6d7e;
+}
+
+.alerta-gestion {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.alerta-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.alerta-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.alerta-fila select,
+.alerta-fila input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #ccd1d1;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+}
