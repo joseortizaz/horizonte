@@ -228,7 +228,25 @@ export class PuertoScene extends Phaser.Scene {
     EventBus.on('resolver', alResolver)
     EventBus.on('encender-faro', alEncenderFaro)
 
+    // Mientras se escribe en un campo de texto (por ejemplo, las notas de la Bitácora),
+    // el juego deja de capturar teclas como el espacio, la E o WASD, para que se puedan escribir.
+    const esCampoDeTexto = (elemento: EventTarget | null) =>
+      elemento instanceof HTMLInputElement ||
+      elemento instanceof HTMLTextAreaElement ||
+      elemento instanceof HTMLSelectElement ||
+      (elemento instanceof HTMLElement && elemento.isContentEditable)
+    const alEnfocar = (e: FocusEvent) => {
+      if (esCampoDeTexto(e.target)) teclado.disableGlobalCapture()
+    }
+    const alDesenfocar = (e: FocusEvent) => {
+      if (esCampoDeTexto(e.target)) teclado.enableGlobalCapture()
+    }
+    document.addEventListener('focusin', alEnfocar)
+    document.addEventListener('focusout', alDesenfocar)
+
     const limpiar = () => {
+      document.removeEventListener('focusin', alEnfocar)
+      document.removeEventListener('focusout', alDesenfocar)
       EventBus.off('dialogo-abierto', alAbrirDialogo)
       EventBus.off('dialogo-cerrado', alCerrarDialogo)
       EventBus.off('pausar', alAbrirDialogo)
