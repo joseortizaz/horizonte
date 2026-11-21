@@ -15,6 +15,7 @@ import { Narrativa } from './narrativa/motor'
 import type { PasoDialogo } from './narrativa/motor'
 import { DialogoPanel } from './narrativa/DialogoPanel'
 import { Bitacora } from './bitacora/Bitacora'
+import { Diario } from './diario/Diario'
 import { NOMBRES_INSIGNIAS } from './bitacora/contenido'
 import { supabase } from './lib/supabase'
 import { useConsentimiento } from './consentimiento/useConsentimiento'
@@ -185,6 +186,8 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
 
   const [bitacoraAbierta, setBitacoraAbierta] = useState(false)
   const [seguirEnVertical, setSeguirEnVertical] = useState(false)
+  const [diarioAbierto, setDiarioAbierto] = useState(false)
+  const [revisionPendiente, setRevisionPendiente] = useState(false)
 
   const abrirBitacora = () => {
     if (dialogoAbierto.current) return
@@ -196,6 +199,32 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
     setBitacoraAbierta(false)
     EventBus.emit('reanudar')
   }, [])
+
+  const abrirDiario = () => {
+    if (dialogoAbierto.current) return
+    EventBus.emit('pausar')
+    setDiarioAbierto(true)
+  }
+
+  const cerrarDiario = useCallback(() => {
+    setDiarioAbierto(false)
+    EventBus.emit('reanudar')
+  }, [])
+
+  // ¿Hay rutas sin revisar esta semana? (para avisar al joven)
+  const revisarPendientes = useCallback(async () => {
+    const { data } = await supabase.rpc('mi_diario')
+    const metas = (data as { metas?: { estado: string; revision_semana: unknown }[] } | null)?.metas ?? []
+    const pendiente = metas.some((m) => m.estado === 'activa' && !m.revision_semana)
+    setRevisionPendiente(pendiente)
+    return pendiente
+  }, [])
+
+  useEffect(() => {
+    void revisarPendientes().then((pendiente) => {
+      if (pendiente) setMensaje('Es hora de revisar tu rumbo: abre tu Diario de Navegación.')
+    })
+  }, [revisarPendientes])
 
   const otorgarInsignia = useCallback(
     (cualidad: string) => {
@@ -213,6 +242,12 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
     },
     [session.user.id]
   )
+
+  // Insignias que otorga el servidor (por ejemplo, Perseverancia en el Diario): solo se muestra el aviso
+  const otorgarInsigniaVisible = useCallback((cualidad: string) => {
+    setInsignia(NOMBRES_INSIGNIAS[cualidad] ?? cualidad)
+    window.setTimeout(() => setInsignia(null), 6000)
+  }, [])
 
   // Reacciona a los eventos que marca el guion (# evento: ...)
   const mostrarPaso = useCallback(
@@ -239,7 +274,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
         } else if (tipo === 'insignia') {
           otorgarInsignia(valor)
         } else if (tipo === 'fin-acto-1') {
-          setMensaje('Fin del Acto I. ¡Gracias por jugar este prototipo!')
+          setMensaje('Fin del Acto I. Tu brújula ya se mueve: abre tu Diario de Navegación y traza tus rutas.')
         }
       }
       contadorPasos.current += 1
@@ -330,6 +365,9 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
               ⛶
             </button>
           )}
+          <button onClick={abrirDiario} className={revisionPendiente ? 'con-aviso' : undefined}>
+            Diario
+          </button>
           <button onClick={abrirBitacora}>Bitácora</button>
           <button onClick={onEditarPersonaje}>Personaje</button>
           <button onClick={() => supabase.auth.signOut()}>Salir</button>
@@ -373,6 +411,15 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
             Seguir en vertical
           </button>
         </div>
+      )}
+
+      {diarioAbierto && (
+        <Diario
+          desbloqueado={faros > 0}
+          onCerrar={cerrarDiario}
+          onInsignia={otorgarInsigniaVisible}
+          onCambio={() => void revisarPendientes()}
+        />
       )}
 
       {bitacoraAbierta && (

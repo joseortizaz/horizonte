@@ -22,6 +22,8 @@ interface Joven {
   recuerdos: number
   insignias: number
   ultima_actividad: string | null
+  rutas_activas: number
+  ultima_revision: string | null
 }
 
 const ETAPAS = ['Sin empezar', 'Explorando la isla', 'Faro encendido', 'Acto I completado']
@@ -269,6 +271,8 @@ export function PanelOrientador({ nombre }: { nombre: string }) {
                     <th>Recuerdos</th>
                     <th>Insignias</th>
                     <th>Última actividad</th>
+                    <th>Rutas del diario</th>
+                    <th>Última revisión</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,6 +288,8 @@ export function PanelOrientador({ nombre }: { nombre: string }) {
                       <td>{j.recuerdos} / 3</td>
                       <td>{j.insignias}</td>
                       <td>{haceCuanto(j.ultima_actividad)}</td>
+                      <td>{j.rutas_activas}</td>
+                      <td>{j.ultima_revision ? haceCuanto(`${j.ultima_revision}T12:00:00`) : 'Nunca'}</td>
                     </tr>
                   ))}
                 </tbody>

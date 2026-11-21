@@ -100,7 +100,8 @@ Y ten cuidado con los Ecos: repiten lo que otros esperan de ti, hasta que crees 
 - faro_encendido && not insignia_autoconocimiento:
     -> despedida
 - faro_encendido:
-    El faro brilla y tu brújula ya señala algo. Cuando estés listo, otras islas te esperan más allá. # hablante: Marea
+    El faro brilla y tu brújula ya señala algo. Revisa tu rumbo en tu Diario de Navegación cada semana. # hablante: Marea
+    Cuando estés listo, otras islas te esperan más allá. # hablante: Marea
 - recuerdos == 3:
     Ya tienes los tres Recuerdos. El faro te espera al noreste. # hablante: Marea
 - recuerdos > 0:
@@ -120,6 +121,7 @@ Y ten cuidado con los Ecos: repiten lo que otros esperan de ti, hasta que crees 
 Hoy hiciste algo que mucha gente evita: mirarte por dentro con honestidad. # hablante: Marea
 ~ insignia_autoconocimiento = true
 Eso tiene un nombre: Autoconocimiento. Llévalo contigo. # hablante: Marea # evento: insignia:autoconocimiento
+Y ahora que tu brújula se mueve, úsala. En tu Diario de Navegación puedes trazar tus primeras rutas: lo que quieres lograr en tu vida, más allá de esta isla. # hablante: Marea
 Más allá de la Bruma hay otras islas. En cada una descubrirás algo nuevo de ti. # hablante: Marea
 Cuando estés listo, el mar te estará esperando, Navegante. # hablante: Marea # evento: fin-acto-1
 -> DONE

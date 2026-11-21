@@ -58,7 +58,7 @@ export function PantallaApoyo({ nivel, onCerrar }: Props) {
         </p>
 
         <button className="creador-guardar" onClick={onCerrar}>
-          Volver a mi Bitácora
+          Volver
         </button>
       </div>
     </div>
