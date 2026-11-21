@@ -1,5 +1,5 @@
 // ======================================================
-//  HORIZONTE — Guion principal
+//  PROYÉCTATE — Guion principal
 //  Acto I: Prólogo e Isla de las Raíces (borrador 1)
 //
 //  Cada personaje u objeto tiene su propio nudo (=== nombre ===).

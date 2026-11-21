@@ -319,7 +319,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
   return (
     <div className="app">
       <header className="hud">
-        <strong className="hud-titulo">Horizonte</strong>
+        <strong className="hud-titulo">Proyéctate</strong>
         <span>
           Faros<span className="hud-largo"> encendidos</span>: {faros} / 7
         </span>
@@ -363,7 +363,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
         <div className="girar" role="dialog" aria-label="Gira tu teléfono">
           <div className="girar-telefono" aria-hidden="true" />
           <h2>Gira tu teléfono</h2>
-          <p>Horizonte se disfruta mejor en horizontal.</p>
+          <p>Proyéctate se disfruta mejor en horizontal.</p>
           {puedePantallaCompleta && (
             <button className="creador-guardar" onClick={() => void alternarPantallaCompleta()}>
               Jugar en pantalla completa

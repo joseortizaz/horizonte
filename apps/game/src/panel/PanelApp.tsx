@@ -24,7 +24,7 @@ export function PanelApp() {
         <div className="auth-card">
           <h1>Panel de orientadores</h1>
           <p>
-            Tu cuenta todavía no tiene acceso al panel. Pide al equipo de Horizonte que la habilite como
+            Tu cuenta todavía no tiene acceso al panel. Pide al equipo de Proyéctate que la habilite como
             cuenta de orientador.
           </p>
           <a className="creador-guardar panel-enlace" href="/">

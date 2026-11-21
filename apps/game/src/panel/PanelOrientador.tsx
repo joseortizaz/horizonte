@@ -115,7 +115,7 @@ export function PanelOrientador({ nombre }: { nombre: string }) {
     <div className="panel">
       <header className="panel-cabecera">
         <div>
-          <p className="bitacora-antetitulo">Horizonte</p>
+          <p className="bitacora-antetitulo">Proyéctate</p>
           <h1>Panel de orientadores</h1>
         </div>
         <div className="panel-usuario">
@@ -171,7 +171,7 @@ export function PanelOrientador({ nombre }: { nombre: string }) {
         {grupos?.length === 0 && !creando && (
           <p className="bitacora-nota">
             Todavía no tienes grupos. Crea uno y comparte su código con los jóvenes: lo escriben al
-            registrarse en Horizonte.
+            registrarse en Proyéctate.
           </p>
         )}
 

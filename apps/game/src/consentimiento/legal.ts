@@ -8,7 +8,7 @@ export const TERMINOS_VERSION = '2026-11-borrador-2'
 export const CONTACTO_PROYECTO = ''
 
 export const QUE_ES = [
-  'Horizonte es un juego de aventura para jóvenes, creado por un equipo de psicología y tecnología.',
+  'Proyéctate es un juego de aventura para jóvenes, creado por un equipo de psicología y tecnología.',
   'Mientras juega, el joven reflexiona sobre sus intereses, sus valores y lo que quiere para su futuro, y va armando su proyecto de vida.',
   'No es una evaluación ni un tratamiento psicológico, y no sustituye la orientación de un profesional.',
 ]

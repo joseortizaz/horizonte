@@ -1,4 +1,4 @@
-// Service worker de Horizonte: guarda los archivos del juego para que
+// Service worker de Proyéctate: guarda los archivos del juego para que
 // abra rápido y funcione aunque la conexión falle.
 // Cambia la versión cuando quieras forzar que se renueve la caché.
 const CACHE = 'horizonte-v1'

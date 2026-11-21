@@ -102,7 +102,7 @@ function FichaAlerta({ alerta, onCambio }: { alerta: Alerta; onCambio: () => Pro
   const enviarMensaje = () =>
     ejecutar(
       supabase.rpc('enviar_mensaje_acompanamiento', { p_alerta: a.id, p_plantilla: plantilla }),
-      `Mensaje enviado. ${a.joven} lo verá al abrir Horizonte.`
+      `Mensaje enviado. ${a.joven} lo verá al abrir Proyéctate.`
     )
 
   const cerrar = async () => {
@@ -117,7 +117,7 @@ function FichaAlerta({ alerta, onCambio }: { alerta: Alerta; onCambio: () => Pro
   }
 
   const mensajeTutor = a.tutor_nombre
-    ? `Hola, ${a.tutor_nombre}. Le escribo del programa Horizonte. Me gustaría conversar con usted sobre ${a.joven}. ¿Cuándo podríamos hablar?`
+    ? `Hola, ${a.tutor_nombre}. Le escribo del programa Proyéctate. Me gustaría conversar con usted sobre ${a.joven}. ¿Cuándo podríamos hablar?`
     : ''
 
   return (

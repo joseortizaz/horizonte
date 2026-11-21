@@ -60,13 +60,13 @@ export function EsperaConsentimiento({ userId, nombre, estado, onRevisar }: Prop
   }, [userId])
 
   const mensaje = enlace
-    ? `Hola, estoy usando Horizonte, un juego para diseñar mi proyecto de vida. Como soy menor de edad, necesito tu autorización. Aquí puedes ver de qué se trata y autorizarme: ${enlace}`
+    ? `Hola, estoy usando Proyéctate, un juego para diseñar mi proyecto de vida. Como soy menor de edad, necesito tu autorización. Aquí puedes ver de qué se trata y autorizarme: ${enlace}`
     : ''
 
   const compartir = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Autorización para Horizonte', text: mensaje })
+        await navigator.share({ title: 'Autorización para Proyéctate', text: mensaje })
         return
       } catch {
         // Si se cancela, no pasa nada
@@ -91,14 +91,14 @@ export function EsperaConsentimiento({ userId, nombre, estado, onRevisar }: Prop
 
         {estado === 'rechazado' && !enlace && (
           <p className="auth-error">
-            Tu madre, padre o tutor no autorizó el uso de Horizonte. Si crees que fue un error,
+            Tu madre, padre o tutor no autorizó el uso de Proyéctate. Si crees que fue un error,
             conversa con esa persona y genera un enlace nuevo.
           </p>
         )}
 
         <p>
           Como tienes menos de 18 años, antes de empezar tu aventura necesitamos que tu madre, padre o
-          tutor autorice que uses Horizonte.
+          tutor autorice que uses Proyéctate.
         </p>
 
         {!enlace ? (

@@ -53,8 +53,8 @@ export function PantallaApoyo({ nivel, onCerrar }: Props) {
 
         <p className="apoyo-nota">
           {alto
-            ? 'Como te contamos, una persona adulta del equipo de Horizonte leerá lo que escribiste para poder acompañarte.'
-            : 'Una persona adulta del equipo de Horizonte sabrá que escribiste algo difícil, para poder acompañarte si lo necesitas.'}
+            ? 'Como te contamos, una persona adulta del equipo de Proyéctate leerá lo que escribiste para poder acompañarte.'
+            : 'Una persona adulta del equipo de Proyéctate sabrá que escribiste algo difícil, para poder acompañarte si lo necesitas.'}
         </p>
 
         <button className="creador-guardar" onClick={onCerrar}>

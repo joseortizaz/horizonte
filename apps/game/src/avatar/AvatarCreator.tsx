@@ -82,7 +82,7 @@ export function AvatarCreator({ inicial, onGuardar, onCancelar }: Props) {
     <div className="creador">
       <div className="creador-card">
         <h1>Crea tu Navegante</h1>
-        <p className="creador-sub">Así te verán en Horizonte. Puedes cambiarlo cuando quieras.</p>
+        <p className="creador-sub">Así te verán en Proyéctate. Puedes cambiarlo cuando quieras.</p>
 
         <div className="creador-cuerpo">
           <div className="creador-vista">

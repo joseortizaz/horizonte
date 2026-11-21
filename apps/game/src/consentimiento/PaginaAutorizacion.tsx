@@ -70,7 +70,7 @@ export function PaginaAutorizacion() {
   return (
     <div className="auth autorizacion">
       <div className="auth-card autorizacion-card">
-        <h1>Horizonte</h1>
+        <h1>Proyéctate</h1>
         <p className="auth-sub">Autorización para madres, padres y tutores</p>
 
         {etapa === 'cargando' && <p>Cargando…</p>}
@@ -84,19 +84,19 @@ export function PaginaAutorizacion() {
         {(etapa === 'respondido' || etapa === 'enviado') && (
           <p className={resultado === 'aceptado' ? 'auth-aviso' : 'auth-nota'}>
             {resultado === 'aceptado'
-              ? `¡Gracias! ${nombreJoven} ya puede usar Horizonte.`
-              : `Registramos que no autorizas el uso de Horizonte para ${nombreJoven}. Gracias por responder.`}
+              ? `¡Gracias! ${nombreJoven} ya puede usar Proyéctate.`
+              : `Registramos que no autorizas el uso de Proyéctate para ${nombreJoven}. Gracias por responder.`}
           </p>
         )}
 
         {etapa === 'formulario' && (
           <form onSubmit={(e) => void responder(true, e)}>
             <p>
-              <strong>{nombreJoven}</strong> quiere usar Horizonte y, por ser menor de edad, necesita tu
+              <strong>{nombreJoven}</strong> quiere usar Proyéctate y, por ser menor de edad, necesita tu
               autorización.
             </p>
 
-            <h2>¿Qué es Horizonte?</h2>
+            <h2>¿Qué es Proyéctate?</h2>
             <ul>
               {QUE_ES.map((t) => (
                 <li key={t}>{t}</li>
@@ -152,7 +152,7 @@ export function PaginaAutorizacion() {
             <label className="autorizacion-declara">
               <input type="checkbox" checked={declara} onChange={(e) => setDeclara(e.target.checked)} />
               <span>
-                Declaro que soy madre, padre o tutor legal de {nombreJoven} y autorizo que use Horizonte
+                Declaro que soy madre, padre o tutor legal de {nombreJoven} y autorizo que use Proyéctate
                 en las condiciones descritas.
               </span>
             </label>

@@ -53,7 +53,7 @@ export function AuthScreen() {
       if (!nombre.trim()) return setError('Escribe cómo quieres que te llamemos.')
       if (!nacimiento) return setError('Indica tu fecha de nacimiento.')
       if (edad !== null && edad < EDAD_MINIMA) {
-        return setError(`Horizonte es para personas de ${EDAD_MINIMA} años en adelante.`)
+        return setError(`Proyéctate es para personas de ${EDAD_MINIMA} años en adelante.`)
       }
       if (clave.length < 8) return setError('La contraseña debe tener al menos 8 caracteres.')
       if (codigo.trim()) {
@@ -96,7 +96,7 @@ export function AuthScreen() {
   return (
     <div className="auth">
       <form className="auth-card" onSubmit={enviar}>
-        <h1>Horizonte</h1>
+        <h1>Proyéctate</h1>
         <p className="auth-sub">
           {modo === 'entrar' ? 'Continúa tu travesía' : 'Comienza tu travesía'}
         </p>
