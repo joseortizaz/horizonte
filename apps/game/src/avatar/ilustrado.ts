@@ -184,4 +184,7 @@ export async function generarAvatarIlustrado(a: Apariencia): Promise<AvatarIlust
 export const IMAGENES = {
   marea: '/personajes/marea.png',
   gota: '/personajes/companero-gota.png',
+  chispa: '/personajes/companero-chispa.png',
+  pluma: '/personajes/companero-pluma.png',
+  coral: '/personajes/companero-coral.png',
 }

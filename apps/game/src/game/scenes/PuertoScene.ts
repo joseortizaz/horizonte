@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser'
 import { EventBus } from '../EventBus'
-import { avatarSvg, companeroSvg, svgADataUri } from '../../avatar/dibujo'
+import { avatarSvg, svgADataUri } from '../../avatar/dibujo'
 import { conchaSvg, ecoSvg, huellaSvg, semillaSvg } from '../personajes'
 import { IMAGENES } from '../../avatar/ilustrado'
 import type { AvatarIlustrado } from '../../avatar/ilustrado'
@@ -17,7 +17,8 @@ const ESCALA_PERSONAJE = 1.15
 // Altura en pantalla de los personajes ilustrados (en píxeles del mundo)
 const ALTO_JUGADOR = 190
 const ALTO_MAREA = 200
-const ALTO_GOTA = 85
+// Altura en pantalla de cada compañero (Chispa incluye su halo de luz)
+const ALTO_COMPANERO = { gota: 85, chispa: 105, pluma: 90, coral: 62 } as const
 // En pantallas táctiles los textos de ayuda hablan de tocar, no de teclas
 const ES_TACTIL = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
@@ -61,6 +62,7 @@ export class PuertoScene extends Phaser.Scene {
   private jugador!: Phaser.GameObjects.Image
   private companero!: Phaser.GameObjects.Image
   private sombraJugador!: Phaser.GameObjects.Ellipse
+  private companeroEnSuelo = false
   private altoJugador = 0
   private indicadorMarea!: Phaser.GameObjects.Text
   private avisoInteractuar!: Phaser.GameObjects.Text
@@ -94,8 +96,7 @@ export class PuertoScene extends Phaser.Scene {
     this.load.image('fondo-encendido', FONDOS.encendido)
     // El personaje ilustrado ya viene recoloreado desde React; si no, se usa el dibujo simple
     if (!this.registry.get('avatarImagen')) svg('avatar', avatarSvg(avatar.apariencia))
-    if (avatar.companero === 'gota') this.load.image('companero', IMAGENES.gota)
-    else svg('companero', companeroSvg(avatar.companero))
+    this.load.image('companero', IMAGENES[avatar.companero])
     this.load.image('marea', IMAGENES.marea)
     svg('eco', ecoSvg())
     svg('concha', conchaSvg())
@@ -226,8 +227,9 @@ export class PuertoScene extends Phaser.Scene {
       inicio.x - 70,
       inicio.y - 70,
       'companero',
-      avatar.companero === 'gota' ? ALTO_GOTA : undefined
+      ALTO_COMPANERO[avatar.companero] ?? 85
     ).setDepth(11)
+    this.companeroEnSuelo = avatar.companero === 'coral'
 
     // La Bruma: más espesa al principio, se aclara con cada Recuerdo.
     // Es más grande que el mundo para cubrir también el mar de los lados.
@@ -382,8 +384,14 @@ export class PuertoScene extends Phaser.Scene {
     // El compañero sigue al jugador flotando suavemente
     const suavidad = Math.min(1, dt * 4)
     const flotar = Math.sin(time / 300) * 6
-    this.companero.x += (this.jugador.x - 70 - this.companero.x) * suavidad
-    this.companero.y += (this.jugador.y - 70 + flotar - this.companero.y) * suavidad
+    // Coral camina por el suelo, a los pies del jugador; los demás vuelan a su lado
+    const enSuelo = this.companeroEnSuelo
+    const objetivoX = this.jugador.x - (enSuelo ? 95 : 70)
+    const objetivoY = enSuelo
+      ? this.jugador.y + this.altoJugador / 2 - this.companero.displayHeight / 2
+      : this.jugador.y - 70 + flotar
+    this.companero.x += (objetivoX - this.companero.x) * suavidad
+    this.companero.y += (objetivoY - this.companero.y) * suavidad
     this.sombraJugador.setPosition(this.jugador.x, this.jugador.y + this.altoJugador / 2 - 6)
 
     // ¿Hay algo cerca con qué interactuar?

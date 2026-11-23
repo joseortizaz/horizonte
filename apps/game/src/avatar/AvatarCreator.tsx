@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { avatarSvg, companeroSvg, svgADataUri } from './dibujo'
+import { avatarSvg, svgADataUri } from './dibujo'
 import { IMAGENES, generarAvatarIlustrado } from './ilustrado'
 import type { AvatarIlustrado } from './ilustrado'
 import {
@@ -9,7 +9,7 @@ import {
 import type { Apariencia, Avatar, Companero, Estilo } from './tipos'
 
 function imagenCompanero(id: Companero) {
-  return id === 'gota' ? IMAGENES.gota : svgADataUri(companeroSvg(id))
+  return IMAGENES[id]
 }
 
 // Vista previa del personaje ilustrado (se recolorea en el navegador)
