@@ -1,7 +1,8 @@
 import * as Phaser from 'phaser'
 import { EventBus } from '../EventBus'
 import { avatarSvg, companeroSvg, svgADataUri } from '../../avatar/dibujo'
-import { conchaSvg, ecoSvg, huellaSvg, mareaSvg, semillaSvg } from '../personajes'
+import { conchaSvg, ecoSvg, huellaSvg, semillaSvg } from '../personajes'
+import { IMAGENES } from '../../avatar/ilustrado'
 import { FONDOS, ISLA, MUNDO } from '../arte/isla'
 import type { Avatar } from '../../avatar/tipos'
 import type { Partida, Posicion } from '../../partida/tipos'
@@ -12,6 +13,10 @@ const RECUERDOS = ['concha', 'huella', 'semilla']
 // Las figuras se dibujan al doble de resolución para que se vean nítidas
 const RESOLUCION = 2
 const ESCALA_PERSONAJE = 1.15
+// Altura en pantalla de los personajes ilustrados (en píxeles del mundo)
+const ALTO_JUGADOR = 190
+const ALTO_MAREA = 200
+const ALTO_GOTA = 85
 // En pantallas táctiles los textos de ayuda hablan de tocar, no de teclas
 const ES_TACTIL = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
@@ -54,6 +59,8 @@ interface Interactivo {
 export class PuertoScene extends Phaser.Scene {
   private jugador!: Phaser.GameObjects.Image
   private companero!: Phaser.GameObjects.Image
+  private sombraJugador!: Phaser.GameObjects.Ellipse
+  private altoJugador = 0
   private indicadorMarea!: Phaser.GameObjects.Text
   private avisoInteractuar!: Phaser.GameObjects.Text
   private fondoEncendido!: Phaser.GameObjects.Image
@@ -84,9 +91,11 @@ export class PuertoScene extends Phaser.Scene {
 
     this.load.image('fondo-apagado', FONDOS.apagado)
     this.load.image('fondo-encendido', FONDOS.encendido)
-    svg('avatar', avatarSvg(avatar.apariencia))
-    svg('companero', companeroSvg(avatar.companero))
-    svg('marea', mareaSvg())
+    // El personaje ilustrado ya viene recoloreado desde React; si no, se usa el dibujo simple
+    if (!this.registry.get('avatarImagen')) svg('avatar', avatarSvg(avatar.apariencia))
+    if (avatar.companero === 'gota') this.load.image('companero', IMAGENES.gota)
+    else svg('companero', companeroSvg(avatar.companero))
+    this.load.image('marea', IMAGENES.marea)
     svg('eco', ecoSvg())
     svg('concha', conchaSvg())
     svg('huella', huellaSvg())
@@ -95,6 +104,12 @@ export class PuertoScene extends Phaser.Scene {
 
   create() {
     const partida = this.registry.get('partida') as Partida
+    const avatar = this.registry.get('avatar') as Avatar
+    const avatarImagen = this.registry.get('avatarImagen') as HTMLImageElement | null
+    if (avatarImagen) {
+      if (this.textures.exists('avatar')) this.textures.remove('avatar')
+      this.textures.addImage('avatar', avatarImagen)
+    }
     // Lo que ya se resolvió en la historia: recuerdos recogidos, eco vencido, etc.
     const resueltos = (this.registry.get('resueltos') as string[]) ?? []
     this.faroEncendido = partida.faros.includes('raices')
@@ -120,7 +135,8 @@ export class PuertoScene extends Phaser.Scene {
     this.agregarInteractivo('faro', 'faro', zonaFaro, 130, false, LUGARES.faro.x, LUGARES.faro.y)
 
     // Marea, la guardiana de la isla
-    const marea = this.figura(LUGARES.marea.x, LUGARES.marea.y, 'marea').setDepth(9)
+    this.sombra(LUGARES.marea.x, LUGARES.marea.y + ALTO_MAREA / 2 - 8, 110)
+    const marea = this.figura(LUGARES.marea.x, LUGARES.marea.y, 'marea', ALTO_MAREA).setDepth(9)
     this.agregarInteractivo('marea', 'marea', marea, 110, false)
     this.indicadorMarea = this.add
       .text(marea.x, marea.y - 115, '!', {
@@ -187,9 +203,16 @@ export class PuertoScene extends Phaser.Scene {
 
     // Personaje del jugador y su compañero
     const inicio = this.posicionInicial(partida.posicion)
-    this.jugador = this.figura(inicio.x, inicio.y, 'avatar').setDepth(10)
+    this.jugador = this.figura(inicio.x, inicio.y, 'avatar', avatarImagen ? ALTO_JUGADOR : undefined).setDepth(10)
+    this.altoJugador = this.jugador.displayHeight
+    this.sombraJugador = this.sombra(inicio.x, inicio.y + this.altoJugador / 2 - 6, this.jugador.displayWidth * 0.9)
     this.ultimaPosicionAvisada.set(inicio.x, inicio.y)
-    this.companero = this.figura(inicio.x - 70, inicio.y - 70, 'companero').setDepth(11)
+    this.companero = this.figura(
+      inicio.x - 70,
+      inicio.y - 70,
+      'companero',
+      avatar.companero === 'gota' ? ALTO_GOTA : undefined
+    ).setDepth(11)
 
     // La Bruma: más espesa al principio, se aclara con cada Recuerdo.
     // Es más grande que el mundo para cubrir también el mar de los lados.
@@ -346,6 +369,7 @@ export class PuertoScene extends Phaser.Scene {
     const flotar = Math.sin(time / 300) * 6
     this.companero.x += (this.jugador.x - 70 - this.companero.x) * suavidad
     this.companero.y += (this.jugador.y - 70 + flotar - this.companero.y) * suavidad
+    this.sombraJugador.setPosition(this.jugador.x, this.jugador.y + this.altoJugador / 2 - 6)
 
     // ¿Hay algo cerca con qué interactuar?
     const cercano = this.interactivoCercano()
@@ -403,8 +427,15 @@ export class PuertoScene extends Phaser.Scene {
     return sobreLaIsla(p.x, p.y) ? p : LUGARES.inicio
   }
 
-  private figura(x: number, y: number, textura: string) {
-    return this.add.image(x, y, textura).setScale(ESCALA_PERSONAJE)
+  // Coloca una figura. Con `alto`, se escala para medir esa altura (personajes ilustrados).
+  private figura(x: number, y: number, textura: string, alto?: number) {
+    const imagen = this.add.image(x, y, textura)
+    return imagen.setScale(alto ? alto / imagen.height : ESCALA_PERSONAJE)
+  }
+
+  // Sombra ovalada a los pies de un personaje, para que se vea apoyado en el suelo
+  private sombra(x: number, y: number, ancho: number) {
+    return this.add.ellipse(x, y, ancho, ancho * 0.28, 0x0b2a1f, 0.28).setDepth(8)
   }
 
   private agregarInteractivo(

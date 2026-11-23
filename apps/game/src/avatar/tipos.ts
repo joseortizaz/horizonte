@@ -30,18 +30,26 @@ export const MOVILIDAD = [
   { id: 'silla', nombre: 'Silla de ruedas' },
 ] as const
 
+export const ESTILOS = [
+  { id: 'ilustrado', nombre: 'Ilustrado' },
+  { id: 'clasico', nombre: 'Dibujo simple (más opciones)' },
+] as const
+
 export const COMPANEROS = [
+  { id: 'gota', nombre: 'Gota', descripcion: 'Un espíritu del mar, juguetón y leal, que nunca te deja solo.' },
   { id: 'chispa', nombre: 'Chispa', descripcion: 'Una lucecita curiosa que ilumina lo que nadie ve.' },
   { id: 'pluma', nombre: 'Pluma', descripcion: 'Un ave que mira desde lo alto y nunca se rinde.' },
   { id: 'coral', nombre: 'Coral', descripcion: 'Una tortuga tranquila que conoce todos los caminos del mar.' },
 ] as const
 
+export type Estilo = (typeof ESTILOS)[number]['id']
 export type Peinado = (typeof PEINADOS)[number]['id']
 export type Accesorio = (typeof ACCESORIOS)[number]['id']
 export type Movilidad = (typeof MOVILIDAD)[number]['id']
 export type Companero = (typeof COMPANEROS)[number]['id']
 
 export interface Apariencia {
+  estilo: Estilo
   piel: string
   peinado: Peinado
   cabello: string
@@ -57,23 +65,25 @@ export interface Avatar {
 
 export const AVATAR_INICIAL: Avatar = {
   apariencia: {
+    estilo: 'ilustrado',
     piel: TONOS_PIEL[2],
     peinado: 'corto',
     cabello: COLORES_CABELLO[1],
-    ropa: COLORES_ROPA[0],
+    ropa: COLORES_ROPA[1],
     accesorio: 'ninguno',
     movilidad: 'a-pie',
   },
-  companero: 'chispa',
+  companero: 'gota',
 }
 
 function alAzar<T>(lista: readonly T[]): T {
   return lista[Math.floor(Math.random() * lista.length)]
 }
 
-export function avatarAleatorio(movilidad: Movilidad): Avatar {
+export function avatarAleatorio(estilo: Estilo, movilidad: Movilidad): Avatar {
   return {
     apariencia: {
+      estilo,
       piel: alAzar(TONOS_PIEL),
       peinado: alAzar(PEINADOS).id,
       cabello: alAzar(COLORES_CABELLO),

@@ -4,6 +4,14 @@ import { escribirCopia, leerCopia } from '../lib/copiaLocal'
 import { AVATAR_INICIAL } from './tipos'
 import type { Apariencia, Avatar, Companero } from './tipos'
 
+// Personajes guardados antes de que existiera el estilo ilustrado:
+// pasan al dibujo ilustrado, salvo quien eligió silla de ruedas (aún solo en el dibujo simple)
+function normalizar(avatar: Avatar): Avatar {
+  const ap = avatar.apariencia as Partial<Apariencia>
+  const estilo = ap.estilo ?? (ap.movilidad === 'silla' ? 'clasico' : 'ilustrado')
+  return { ...avatar, apariencia: { ...AVATAR_INICIAL.apariencia, ...ap, estilo } }
+}
+
 // Carga y guarda el personaje del usuario en Supabase.
 // Guarda también una copia en el dispositivo para poder jugar sin conexión.
 export function useAvatar(userId: string) {
@@ -28,17 +36,17 @@ export function useAvatar(userId: string) {
         if (fallo) {
           // Sin conexión: se usa la copia del dispositivo, si existe
           const copia = leerCopia<Avatar>(clave)
-          if (copia) setAvatar(copia)
+          if (copia) setAvatar(normalizar(copia))
           else setError(true)
           setCargando(false)
           return
         }
 
         if (data) {
-          const cargado: Avatar = {
-            apariencia: { ...AVATAR_INICIAL.apariencia, ...(data.apariencia as Partial<Apariencia>) },
+          const cargado = normalizar({
+            apariencia: data.apariencia as Apariencia,
             companero: data.companero as Companero,
-          }
+          })
           escribirCopia(clave, cargado)
           setAvatar(cargado)
         }

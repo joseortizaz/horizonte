@@ -1,10 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { avatarSvg, companeroSvg, svgADataUri } from './dibujo'
+import { IMAGENES, generarAvatarIlustrado } from './ilustrado'
 import {
-  ACCESORIOS, AVATAR_INICIAL, COLORES_CABELLO, COLORES_ROPA, COMPANEROS, MOVILIDAD, PEINADOS,
+  ACCESORIOS, AVATAR_INICIAL, COLORES_CABELLO, COLORES_ROPA, COMPANEROS, ESTILOS, MOVILIDAD, PEINADOS,
   TONOS_PIEL, avatarAleatorio,
 } from './tipos'
-import type { Apariencia, Avatar } from './tipos'
+import type { Apariencia, Avatar, Companero } from './tipos'
+
+function imagenCompanero(id: Companero) {
+  return id === 'gota' ? IMAGENES.gota : svgADataUri(companeroSvg(id))
+}
+
+// Vista previa del personaje ilustrado (se recolorea en el navegador)
+function useVistaIlustrada(a: Apariencia) {
+  const [url, setUrl] = useState('')
+  const { estilo, piel, cabello, ropa } = a
+  useEffect(() => {
+    if (estilo !== 'ilustrado') return
+    let activo = true
+    generarAvatarIlustrado({ piel, cabello, ropa })
+      .then((u) => activo && setUrl(u))
+      .catch(() => activo && setUrl(''))
+    return () => {
+      activo = false
+    }
+  }, [estilo, piel, cabello, ropa])
+  return url
+}
 
 interface Props {
   inicial: Avatar | null
@@ -62,6 +84,8 @@ export function AvatarCreator({ inicial, onGuardar, onCancelar }: Props) {
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   const a = avatar.apariencia
+  const ilustrado = a.estilo === 'ilustrado'
+  const vistaIlustrada = useVistaIlustrada(a)
 
   function cambiar<K extends keyof Apariencia>(campo: K, valor: Apariencia[K]) {
     setAvatar((actual) => ({ ...actual, apariencia: { ...actual.apariencia, [campo]: valor } }))
@@ -87,38 +111,60 @@ export function AvatarCreator({ inicial, onGuardar, onCancelar }: Props) {
         <div className="creador-cuerpo">
           <div className="creador-vista">
             <div className="creador-escenario">
-              <img src={svgADataUri(avatarSvg(a))} width={160} height={200} alt="Vista previa de tu personaje" />
+              {ilustrado ? (
+                vistaIlustrada && (
+                  <img src={vistaIlustrada} height={200} style={{ width: 'auto' }} alt="Vista previa de tu personaje" />
+                )
+              ) : (
+                <img src={svgADataUri(avatarSvg(a))} width={160} height={200} alt="Vista previa de tu personaje" />
+              )}
               <img
                 className="creador-companero"
-                src={svgADataUri(companeroSvg(avatar.companero))}
+                src={imagenCompanero(avatar.companero)}
                 width={64}
                 height={64}
                 alt=""
               />
             </div>
-            <button type="button" className="opcion" onClick={() => setAvatar(avatarAleatorio(a.movilidad))}>
+            <button type="button" className="opcion" onClick={() => setAvatar(avatarAleatorio(a.estilo, a.movilidad))}>
               Sorpréndeme
             </button>
           </div>
 
           <div className="creador-opciones">
+            <h3>Estilo de dibujo</h3>
+            <Opciones opciones={ESTILOS} valor={a.estilo} onElegir={(id) => cambiar('estilo', id)} />
+
             <h3>Tono de piel</h3>
             <Muestras colores={TONOS_PIEL} valor={a.piel} etiqueta="Tono de piel" onElegir={(c) => cambiar('piel', c)} />
 
-            <h3>Peinado</h3>
-            <Opciones opciones={PEINADOS} valor={a.peinado} onElegir={(id) => cambiar('peinado', id)} />
+            {!ilustrado && (
+              <>
+                <h3>Peinado</h3>
+                <Opciones opciones={PEINADOS} valor={a.peinado} onElegir={(id) => cambiar('peinado', id)} />
+              </>
+            )}
 
             <h3>Color de cabello</h3>
             <Muestras colores={COLORES_CABELLO} valor={a.cabello} etiqueta="Color de cabello" onElegir={(c) => cambiar('cabello', c)} />
 
-            <h3>Color de ropa</h3>
+            <h3>{ilustrado ? 'Color de la sudadera' : 'Color de ropa'}</h3>
             <Muestras colores={COLORES_ROPA} valor={a.ropa} etiqueta="Color de ropa" onElegir={(c) => cambiar('ropa', c)} />
 
-            <h3>Accesorio</h3>
-            <Opciones opciones={ACCESORIOS} valor={a.accesorio} onElegir={(id) => cambiar('accesorio', id)} />
+            {ilustrado ? (
+              <p className="creador-sub">
+                Pronto habrá más peinados, accesorios y la opción de silla de ruedas en este estilo.
+                Si los quieres ya, elige «Dibujo simple».
+              </p>
+            ) : (
+              <>
+                <h3>Accesorio</h3>
+                <Opciones opciones={ACCESORIOS} valor={a.accesorio} onElegir={(id) => cambiar('accesorio', id)} />
 
-            <h3>Movilidad</h3>
-            <Opciones opciones={MOVILIDAD} valor={a.movilidad} onElegir={(id) => cambiar('movilidad', id)} />
+                <h3>Movilidad</h3>
+                <Opciones opciones={MOVILIDAD} valor={a.movilidad} onElegir={(id) => cambiar('movilidad', id)} />
+              </>
+            )}
           </div>
         </div>
 
@@ -132,7 +178,7 @@ export function AvatarCreator({ inicial, onGuardar, onCancelar }: Props) {
               aria-pressed={c.id === avatar.companero}
               onClick={() => setAvatar((actual) => ({ ...actual, companero: c.id }))}
             >
-              <img src={svgADataUri(companeroSvg(c.id))} width={56} height={56} alt="" />
+              <img src={imagenCompanero(c.id)} width={56} height={56} style={{ objectFit: 'contain' }} alt="" />
               <strong>{c.nombre}</strong>
               <span>{c.descripcion}</span>
             </button>
