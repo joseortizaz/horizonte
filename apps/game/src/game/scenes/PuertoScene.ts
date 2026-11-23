@@ -3,6 +3,7 @@ import { EventBus } from '../EventBus'
 import { avatarSvg, companeroSvg, svgADataUri } from '../../avatar/dibujo'
 import { conchaSvg, ecoSvg, huellaSvg, semillaSvg } from '../personajes'
 import { IMAGENES } from '../../avatar/ilustrado'
+import type { AvatarIlustrado } from '../../avatar/ilustrado'
 import { FONDOS, ISLA, MUNDO } from '../arte/isla'
 import type { Avatar } from '../../avatar/tipos'
 import type { Partida, Posicion } from '../../partida/tipos'
@@ -203,9 +204,23 @@ export class PuertoScene extends Phaser.Scene {
 
     // Personaje del jugador y su compañero
     const inicio = this.posicionInicial(partida.posicion)
-    this.jugador = this.figura(inicio.x, inicio.y, 'avatar', avatarImagen ? ALTO_JUGADOR : undefined).setDepth(10)
-    this.altoJugador = this.jugador.displayHeight
-    this.sombraJugador = this.sombra(inicio.x, inicio.y + this.altoJugador / 2 - 6, this.jugador.displayWidth * 0.9)
+    const forma = this.registry.get('avatarForma') as AvatarIlustrado | null
+    if (avatarImagen && forma) {
+      // Personaje ilustrado: todos se escalan igual, para que la silla, el pelo o la gorra no cambien la talla.
+      // El punto (x, y) del jugador queda a media altura del cuerpo, como con el dibujo simple.
+      const escala = ALTO_JUGADOR / forma.altoReferencia
+      this.jugador = this.add
+        .image(inicio.x, inicio.y, 'avatar')
+        .setScale(escala)
+        .setOrigin(forma.piesX / forma.ancho, (forma.piesY - forma.altoReferencia / 2) / forma.alto)
+        .setDepth(10)
+      this.altoJugador = ALTO_JUGADOR
+      this.sombraJugador = this.sombra(inicio.x, inicio.y + ALTO_JUGADOR / 2 - 6, forma.anchoCuerpo * escala * 0.85)
+    } else {
+      this.jugador = this.figura(inicio.x, inicio.y, 'avatar').setDepth(10)
+      this.altoJugador = this.jugador.displayHeight
+      this.sombraJugador = this.sombra(inicio.x, inicio.y + this.altoJugador / 2 - 6, this.jugador.displayWidth * 0.9)
+    }
     this.ultimaPosicionAvisada.set(inicio.x, inicio.y)
     this.companero = this.figura(
       inicio.x - 70,

@@ -6,7 +6,7 @@ import type { Apariencia, Companero } from './tipos'
 const TINTA = '#1c2833'
 
 function cabelloDetras(a: Apariencia) {
-  if (a.peinado === 'largo') return `<rect x="18" y="18" width="28" height="24" rx="6" fill="${a.cabello}"/>`
+  if (a.peinado === 'largo' || a.peinado === 'rizado-largo') return `<rect x="18" y="18" width="28" height="24" rx="6" fill="${a.cabello}"/>`
   if (a.peinado === 'mono') return `<circle cx="32" cy="8" r="6" fill="${a.cabello}"/>`
   return ''
 }
@@ -19,6 +19,7 @@ function cabelloDelante(a: Apariencia) {
     case 'mono':
       return `<path d="M19 23 Q18 9 32 9 Q46 9 45 23 Q41 15 32 16 Q23 15 19 23Z" fill="${c}"/>`
     case 'rizado':
+    case 'rizado-largo':
       return `<g fill="${c}"><circle cx="21" cy="18" r="6"/><circle cx="26" cy="12" r="6"/><circle cx="32" cy="10" r="6"/><circle cx="38" cy="12" r="6"/><circle cx="43" cy="18" r="6"/></g>`
     case 'rapado':
       return `<path d="M20 19 Q22 11 32 11 Q42 11 44 19 Q32 14 20 19Z" fill="${c}" opacity="0.8"/>`

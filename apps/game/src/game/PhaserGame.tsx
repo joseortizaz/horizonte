@@ -3,6 +3,7 @@ import * as Phaser from 'phaser'
 import { PuertoScene } from './scenes/PuertoScene'
 import { COLOR_MAR, MUNDO } from './arte/isla'
 import { cargarElemento, generarAvatarIlustrado } from '../avatar/ilustrado'
+import type { AvatarIlustrado } from '../avatar/ilustrado'
 import type { Avatar } from '../avatar/tipos'
 import type { Partida } from '../partida/tipos'
 
@@ -21,12 +22,14 @@ export function PhaserGame({ avatar, partida, resueltos }: {
     async function iniciar() {
     // El personaje ilustrado se recolorea antes de arrancar el juego
     let avatarImagen: HTMLImageElement | null = null
+    let avatarForma: AvatarIlustrado | null = null
     if (avatar.apariencia.estilo === 'ilustrado') {
       try {
-        const { piel, cabello, ropa } = avatar.apariencia
-        avatarImagen = await cargarElemento(await generarAvatarIlustrado({ piel, cabello, ropa }))
+        avatarForma = await generarAvatarIlustrado(avatar.apariencia)
+        avatarImagen = await cargarElemento(avatarForma.url)
       } catch {
         avatarImagen = null // si falla, se usa el dibujo simple
+        avatarForma = null
       }
     }
     if (cancelado || juego.current || !contenedor.current) return
@@ -49,6 +52,7 @@ export function PhaserGame({ avatar, partida, resueltos }: {
           game.registry.set('partida', partida)
           game.registry.set('resueltos', resueltos)
           game.registry.set('avatarImagen', avatarImagen)
+          game.registry.set('avatarForma', avatarForma)
         },
       },
       scene: [PuertoScene],

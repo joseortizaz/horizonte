@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { avatarSvg, companeroSvg, svgADataUri } from './dibujo'
 import { IMAGENES, generarAvatarIlustrado } from './ilustrado'
+import type { AvatarIlustrado } from './ilustrado'
 import {
-  ACCESORIOS, AVATAR_INICIAL, COLORES_CABELLO, COLORES_ROPA, COMPANEROS, ESTILOS, MOVILIDAD, PEINADOS,
-  TONOS_PIEL, avatarAleatorio,
+  ACCESORIOS, ACCESORIOS_ILUSTRADO, AVATAR_INICIAL, COLORES_CABELLO, COLORES_ROPA, COMPANEROS, CUERPOS,
+  ESTILOS, LENTES, MOVILIDAD, PEINADOS, PEINADOS_ILUSTRADO, TONOS_PIEL, avatarAleatorio,
 } from './tipos'
-import type { Apariencia, Avatar, Companero } from './tipos'
+import type { Apariencia, Avatar, Companero, Estilo } from './tipos'
 
 function imagenCompanero(id: Companero) {
   return id === 'gota' ? IMAGENES.gota : svgADataUri(companeroSvg(id))
@@ -13,19 +14,34 @@ function imagenCompanero(id: Companero) {
 
 // Vista previa del personaje ilustrado (se recolorea en el navegador)
 function useVistaIlustrada(a: Apariencia) {
-  const [url, setUrl] = useState('')
-  const { estilo, piel, cabello, ropa } = a
+  const [vista, setVista] = useState<AvatarIlustrado | null>(null)
+  const clave = JSON.stringify(a)
   useEffect(() => {
-    if (estilo !== 'ilustrado') return
+    const ap = JSON.parse(clave) as Apariencia
+    if (ap.estilo !== 'ilustrado') return
     let activo = true
-    generarAvatarIlustrado({ piel, cabello, ropa })
-      .then((u) => activo && setUrl(u))
-      .catch(() => activo && setUrl(''))
+    generarAvatarIlustrado(ap)
+      .then((v) => activo && setVista(v))
+      .catch(() => activo && setVista(null))
     return () => {
       activo = false
     }
-  }, [estilo, piel, cabello, ropa])
-  return url
+  }, [clave])
+  return vista
+}
+
+// Al cambiar de estilo, adapta las opciones que solo existen en uno de los dos
+function conEstilo(a: Apariencia, estilo: Estilo): Apariencia {
+  if (estilo === 'ilustrado') {
+    const lentes = a.lentes || a.accesorio === 'lentes'
+    return { ...a, estilo, lentes, accesorio: a.accesorio === 'lentes' ? 'ninguno' : a.accesorio }
+  }
+  return {
+    ...a,
+    estilo,
+    peinado: a.peinado === 'rizado-largo' ? 'rizado' : a.peinado,
+    accesorio: a.lentes && a.accesorio === 'ninguno' ? 'lentes' : a.accesorio,
+  }
 }
 
 interface Props {
@@ -113,7 +129,11 @@ export function AvatarCreator({ inicial, onGuardar, onCancelar }: Props) {
             <div className="creador-escenario">
               {ilustrado ? (
                 vistaIlustrada && (
-                  <img src={vistaIlustrada} height={200} style={{ width: 'auto' }} alt="Vista previa de tu personaje" />
+                  <img
+                    src={vistaIlustrada.url}
+                    style={{ height: (vistaIlustrada.alto / vistaIlustrada.altoReferencia) * 210, width: 'auto' }}
+                    alt="Vista previa de tu personaje"
+                  />
                 )
               ) : (
                 <img src={svgADataUri(avatarSvg(a))} width={160} height={200} alt="Vista previa de tu personaje" />
@@ -133,16 +153,27 @@ export function AvatarCreator({ inicial, onGuardar, onCancelar }: Props) {
 
           <div className="creador-opciones">
             <h3>Estilo de dibujo</h3>
-            <Opciones opciones={ESTILOS} valor={a.estilo} onElegir={(id) => cambiar('estilo', id)} />
+            <Opciones
+              opciones={ESTILOS}
+              valor={a.estilo}
+              onElegir={(id) => setAvatar((actual) => ({ ...actual, apariencia: conEstilo(actual.apariencia, id) }))}
+            />
+
+            {ilustrado && a.movilidad !== 'silla' && (
+              <>
+                <h3>Cuerpo</h3>
+                <Opciones opciones={CUERPOS} valor={a.cuerpo} onElegir={(id) => cambiar('cuerpo', id)} />
+              </>
+            )}
 
             <h3>Tono de piel</h3>
             <Muestras colores={TONOS_PIEL} valor={a.piel} etiqueta="Tono de piel" onElegir={(c) => cambiar('piel', c)} />
 
-            {!ilustrado && (
-              <>
-                <h3>Peinado</h3>
-                <Opciones opciones={PEINADOS} valor={a.peinado} onElegir={(id) => cambiar('peinado', id)} />
-              </>
+            <h3>Peinado</h3>
+            {ilustrado ? (
+              <Opciones opciones={PEINADOS_ILUSTRADO} valor={a.peinado} onElegir={(id) => cambiar('peinado', id)} />
+            ) : (
+              <Opciones opciones={PEINADOS} valor={a.peinado} onElegir={(id) => cambiar('peinado', id)} />
             )}
 
             <h3>Color de cabello</h3>
@@ -152,19 +183,30 @@ export function AvatarCreator({ inicial, onGuardar, onCancelar }: Props) {
             <Muestras colores={COLORES_ROPA} valor={a.ropa} etiqueta="Color de ropa" onElegir={(c) => cambiar('ropa', c)} />
 
             {ilustrado ? (
-              <p className="creador-sub">
-                Pronto habrá más peinados, accesorios y la opción de silla de ruedas en este estilo.
-                Si los quieres ya, elige «Dibujo simple».
-              </p>
+              <>
+                <h3>Lentes</h3>
+                <Opciones
+                  opciones={LENTES}
+                  valor={a.lentes ? 'si' : 'no'}
+                  onElegir={(id) => cambiar('lentes', id === 'si')}
+                />
+
+                <h3>Accesorio</h3>
+                <Opciones
+                  opciones={ACCESORIOS_ILUSTRADO}
+                  valor={a.accesorio === 'lentes' ? 'ninguno' : a.accesorio}
+                  onElegir={(id) => cambiar('accesorio', id)}
+                />
+              </>
             ) : (
               <>
                 <h3>Accesorio</h3>
                 <Opciones opciones={ACCESORIOS} valor={a.accesorio} onElegir={(id) => cambiar('accesorio', id)} />
-
-                <h3>Movilidad</h3>
-                <Opciones opciones={MOVILIDAD} valor={a.movilidad} onElegir={(id) => cambiar('movilidad', id)} />
               </>
             )}
+
+            <h3>Movilidad</h3>
+            <Opciones opciones={MOVILIDAD} valor={a.movilidad} onElegir={(id) => cambiar('movilidad', id)} />
           </div>
         </div>
 

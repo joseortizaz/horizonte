@@ -18,6 +18,32 @@ export const PEINADOS = [
   { id: 'rapado', nombre: 'Rapado' },
 ] as const
 
+// Opciones del estilo ilustrado (piezas recortadas de los dibujos)
+export const PEINADOS_ILUSTRADO = [
+  { id: 'corto', nombre: 'Corto' },
+  { id: 'largo', nombre: 'Largo lacio' },
+  { id: 'rizado', nombre: 'Rizado corto' },
+  { id: 'rizado-largo', nombre: 'Rizado largo' },
+  { id: 'mono', nombre: 'Moño' },
+  { id: 'rapado', nombre: 'Rapado' },
+] as const
+
+export const CUERPOS = [
+  { id: 'a', nombre: 'Cuerpo 1' },
+  { id: 'b', nombre: 'Cuerpo 2' },
+] as const
+
+export const ACCESORIOS_ILUSTRADO = [
+  { id: 'ninguno', nombre: 'Ninguno' },
+  { id: 'gorra', nombre: 'Gorra' },
+  { id: 'audifonos', nombre: 'Audífonos' },
+] as const
+
+export const LENTES = [
+  { id: 'no', nombre: 'Sin lentes' },
+  { id: 'si', nombre: 'Con lentes' },
+] as const
+
 export const ACCESORIOS = [
   { id: 'ninguno', nombre: 'Ninguno' },
   { id: 'lentes', nombre: 'Lentes' },
@@ -43,13 +69,16 @@ export const COMPANEROS = [
 ] as const
 
 export type Estilo = (typeof ESTILOS)[number]['id']
-export type Peinado = (typeof PEINADOS)[number]['id']
+export type Peinado = (typeof PEINADOS)[number]['id'] | (typeof PEINADOS_ILUSTRADO)[number]['id']
+export type Cuerpo = (typeof CUERPOS)[number]['id']
 export type Accesorio = (typeof ACCESORIOS)[number]['id']
 export type Movilidad = (typeof MOVILIDAD)[number]['id']
 export type Companero = (typeof COMPANEROS)[number]['id']
 
 export interface Apariencia {
   estilo: Estilo
+  cuerpo: Cuerpo
+  lentes: boolean
   piel: string
   peinado: Peinado
   cabello: string
@@ -66,6 +95,8 @@ export interface Avatar {
 export const AVATAR_INICIAL: Avatar = {
   apariencia: {
     estilo: 'ilustrado',
+    cuerpo: 'b',
+    lentes: false,
     piel: TONOS_PIEL[2],
     peinado: 'corto',
     cabello: COLORES_CABELLO[1],
@@ -81,14 +112,17 @@ function alAzar<T>(lista: readonly T[]): T {
 }
 
 export function avatarAleatorio(estilo: Estilo, movilidad: Movilidad): Avatar {
+  const ilustrado = estilo === 'ilustrado'
   return {
     apariencia: {
       estilo,
+      cuerpo: alAzar(CUERPOS).id,
+      lentes: Math.random() < 0.4,
       piel: alAzar(TONOS_PIEL),
-      peinado: alAzar(PEINADOS).id,
+      peinado: ilustrado ? alAzar(PEINADOS_ILUSTRADO).id : alAzar(PEINADOS).id,
       cabello: alAzar(COLORES_CABELLO),
       ropa: alAzar(COLORES_ROPA),
-      accesorio: alAzar(ACCESORIOS).id,
+      accesorio: ilustrado ? alAzar(ACCESORIOS_ILUSTRADO).id : alAzar(ACCESORIOS).id,
       movilidad,
     },
     companero: alAzar(COMPANEROS).id,

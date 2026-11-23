@@ -5,11 +5,12 @@ import { AVATAR_INICIAL } from './tipos'
 import type { Apariencia, Avatar, Companero } from './tipos'
 
 // Personajes guardados antes de que existiera el estilo ilustrado:
-// pasan al dibujo ilustrado, salvo quien eligió silla de ruedas (aún solo en el dibujo simple)
+// pasan al dibujo ilustrado conservando lo que eligieron (peinado, lentes, silla, colores)
 function normalizar(avatar: Avatar): Avatar {
   const ap = avatar.apariencia as Partial<Apariencia>
-  const estilo = ap.estilo ?? (ap.movilidad === 'silla' ? 'clasico' : 'ilustrado')
-  return { ...avatar, apariencia: { ...AVATAR_INICIAL.apariencia, ...ap, estilo } }
+  const estilo = ap.estilo ?? 'ilustrado'
+  const lentes = ap.lentes ?? ap.accesorio === 'lentes'
+  return { ...avatar, apariencia: { ...AVATAR_INICIAL.apariencia, ...ap, estilo, lentes } }
 }
 
 // Carga y guarda el personaje del usuario en Supabase.
