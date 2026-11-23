@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as Phaser from 'phaser'
 import { PuertoScene } from './scenes/PuertoScene'
+import { COLOR_MAR, MUNDO } from './arte/isla'
 import type { Avatar } from '../avatar/tipos'
 import type { Partida } from '../partida/tipos'
 
@@ -18,11 +19,12 @@ export function PhaserGame({ avatar, partida, resueltos }: {
     juego.current = new Phaser.Game({
       type: Phaser.AUTO,
       parent: contenedor.current,
-      width: 800,
-      height: 600,
-      backgroundColor: '#0e2a3d',
+      width: MUNDO.ancho,
+      height: MUNDO.alto,
+      backgroundColor: COLOR_MAR,
       scale: {
-        mode: Phaser.Scale.FIT,
+        // EXPAND: el mundo se ve completo y el mar llena el resto de la pantalla
+        mode: Phaser.Scale.EXPAND,
         autoCenter: Phaser.Scale.CENTER_BOTH,
       },
       // Pasa el personaje y la partida al juego antes de que arranquen las escenas

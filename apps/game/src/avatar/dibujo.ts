@@ -83,5 +83,9 @@ export function companeroSvg(tipo: Companero) {
 
 // Convierte el SVG en una dirección de imagen que entienden <img> y Phaser
 export function svgADataUri(svg: string) {
-  return `data:image/svg+xml;base64,${btoa(svg)}`
+  // Convierte a UTF-8 antes de codificar, para admitir tildes y eñes
+  const bytes = new TextEncoder().encode(svg)
+  let binario = ''
+  for (const b of bytes) binario += String.fromCharCode(b)
+  return `data:image/svg+xml;base64,${btoa(binario)}`
 }

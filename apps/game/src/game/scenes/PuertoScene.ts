@@ -2,14 +2,42 @@ import * as Phaser from 'phaser'
 import { EventBus } from '../EventBus'
 import { avatarSvg, companeroSvg, svgADataUri } from '../../avatar/dibujo'
 import { conchaSvg, ecoSvg, huellaSvg, mareaSvg, semillaSvg } from '../personajes'
+import { FONDOS, ISLA, MUNDO } from '../arte/isla'
 import type { Avatar } from '../../avatar/tipos'
-import type { Partida } from '../../partida/tipos'
+import type { Partida, Posicion } from '../../partida/tipos'
 
-const VELOCIDAD = 220
+const VELOCIDAD = 320
 const AVISO_POSICION_MS = 5000
 const RECUERDOS = ['concha', 'huella', 'semilla']
+// Las figuras se dibujan al doble de resolución para que se vean nítidas
+const RESOLUCION = 2
+const ESCALA_PERSONAJE = 1.15
 // En pantallas táctiles los textos de ayuda hablan de tocar, no de teclas
 const ES_TACTIL = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
+// Lugares de la isla (coordenadas del mundo de 1600 × 1193, sobre la ilustración)
+const LUGARES = {
+  inicio: { x: 960, y: 610 },
+  faro: { x: 1205, y: 354 },
+  marea: { x: 694, y: 683 },
+  concha: { x: 347, y: 578 },
+  huella: { x: 831, y: 376 },
+  semilla: { x: 1047, y: 809 },
+  eco: { x: 1000, y: 395 },
+}
+
+// ¿El punto está sobre la isla? (fuera de ella está el mar)
+function sobreLaIsla(x: number, y: number) {
+  return ((x - ISLA.cx) / ISLA.rx) ** 2 + ((y - ISLA.cy) / ISLA.ry) ** 2 <= 1
+}
+
+// Si un punto está en el mar, lo acerca a la orilla
+function haciaLaOrilla(x: number, y: number) {
+  const valor = ((x - ISLA.cx) / ISLA.rx) ** 2 + ((y - ISLA.cy) / ISLA.ry) ** 2
+  if (valor <= 1) return { x, y }
+  const f = 0.97 / Math.sqrt(valor)
+  return { x: ISLA.cx + (x - ISLA.cx) * f, y: ISLA.cy + (y - ISLA.cy) * f }
+}
 
 // Algo con lo que el jugador puede interactuar: una persona, un objeto o el faro
 interface Interactivo {
@@ -18,7 +46,7 @@ interface Interactivo {
   x: number
   y: number
   radio: number
-  visual: Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle
+  visual: Phaser.GameObjects.Image | Phaser.GameObjects.Zone
   activo: boolean
   automatico: boolean // se activa solo al acercarse (sin pulsar nada)
 }
@@ -28,8 +56,7 @@ export class PuertoScene extends Phaser.Scene {
   private companero!: Phaser.GameObjects.Image
   private indicadorMarea!: Phaser.GameObjects.Text
   private avisoInteractuar!: Phaser.GameObjects.Text
-  private faro!: Phaser.GameObjects.Rectangle
-  private luzFaro!: Phaser.GameObjects.Arc
+  private fondoEncendido!: Phaser.GameObjects.Image
   private bruma!: Phaser.GameObjects.Rectangle
   private nubes: Phaser.GameObjects.Ellipse[] = []
   private interactivos: Interactivo[] = []
@@ -51,19 +78,22 @@ export class PuertoScene extends Phaser.Scene {
   }
 
   preload() {
-    // El personaje creado por el usuario se convierte en imágenes del juego
     const avatar = this.registry.get('avatar') as Avatar
-    this.load.image('avatar', svgADataUri(avatarSvg(avatar.apariencia)))
-    this.load.image('companero', svgADataUri(companeroSvg(avatar.companero)))
-    this.load.image('marea', svgADataUri(mareaSvg()))
-    this.load.image('eco', svgADataUri(ecoSvg()))
-    this.load.image('concha', svgADataUri(conchaSvg()))
-    this.load.image('huella', svgADataUri(huellaSvg()))
-    this.load.image('semilla', svgADataUri(semillaSvg()))
+    const svg = (clave: string, contenido: string, escala = RESOLUCION) =>
+      this.load.svg(clave, svgADataUri(contenido), { scale: escala })
+
+    this.load.image('fondo-apagado', FONDOS.apagado)
+    this.load.image('fondo-encendido', FONDOS.encendido)
+    svg('avatar', avatarSvg(avatar.apariencia))
+    svg('companero', companeroSvg(avatar.companero))
+    svg('marea', mareaSvg())
+    svg('eco', ecoSvg())
+    svg('concha', conchaSvg())
+    svg('huella', huellaSvg())
+    svg('semilla', semillaSvg())
   }
 
   create() {
-    const { width, height } = this.scale
     const partida = this.registry.get('partida') as Partida
     // Lo que ya se resolvió en la historia: recuerdos recogidos, eco vencido, etc.
     const resueltos = (this.registry.get('resueltos') as string[]) ?? []
@@ -72,36 +102,41 @@ export class PuertoScene extends Phaser.Scene {
     this.interactivos = []
     this.nubes = []
 
-    // Mar e isla
-    this.add.rectangle(0, 0, width, height, 0x1b4f72).setOrigin(0)
-    this.add.ellipse(width / 2, height / 2, width * 0.75, height * 0.65, 0xc9a66b)
+    // La cámara mira siempre al centro de la isla, aunque la pantalla sea más ancha
+    const centrar = () => this.cameras.main.centerOn(MUNDO.ancho / 2, MUNDO.alto / 2)
+    centrar()
+    this.scale.on('resize', centrar)
 
-    // Faro
-    this.faro = this.add.rectangle(width * 0.72, height * 0.38, 24, 60, 0xf4f1ea)
-    this.faro.setStrokeStyle(2, 0x5b4636)
-    this.luzFaro = this.add
-      .circle(this.faro.x, this.faro.y - 40, 12, this.faroEncendido ? 0xffd54f : 0x555555)
-      .setDepth(10)
-    this.agregarInteractivo('faro', 'faro', this.faro, 60, false)
+    // Fondo ilustrado: con el faro apagado y, encima, la versión encendida (invisible al principio)
+    this.add.image(0, 0, 'fondo-apagado').setOrigin(0).setScale(FONDOS.escala)
+    this.fondoEncendido = this.add
+      .image(0, 0, 'fondo-encendido')
+      .setOrigin(0)
+      .setScale(FONDOS.escala)
+      .setAlpha(this.faroEncendido ? 1 : 0)
+
+    // El faro: una zona invisible sobre su dibujo, para poder tocarlo
+    const zonaFaro = this.add.zone(LUGARES.faro.x, LUGARES.faro.y - 120, 150, 280)
+    this.agregarInteractivo('faro', 'faro', zonaFaro, 130, false, LUGARES.faro.x, LUGARES.faro.y)
 
     // Marea, la guardiana de la isla
-    const marea = this.add.image(width * 0.45, height * 0.72, 'marea').setDepth(9)
-    this.agregarInteractivo('marea', 'marea', marea, 70, false)
+    const marea = this.figura(LUGARES.marea.x, LUGARES.marea.y, 'marea').setDepth(9)
+    this.agregarInteractivo('marea', 'marea', marea, 110, false)
     this.indicadorMarea = this.add
-      .text(marea.x, marea.y - 58, '!', {
+      .text(marea.x, marea.y - 115, '!', {
         fontFamily: 'sans-serif',
-        fontSize: '26px',
+        fontSize: '40px',
         fontStyle: 'bold',
         color: '#ffd54f',
         stroke: '#1c2833',
-        strokeThickness: 4,
+        strokeThickness: 6,
       })
       .setOrigin(0.5)
       .setDepth(20)
       .setVisible(!resueltos.includes('marea'))
     this.tweens.add({
       targets: this.indicadorMarea,
-      y: this.indicadorMarea.y - 6,
+      y: this.indicadorMarea.y - 8,
       duration: 600,
       yoyo: true,
       repeat: -1,
@@ -109,33 +144,33 @@ export class PuertoScene extends Phaser.Scene {
     })
 
     // Los tres Recuerdos, brillando entre la Bruma
-    this.crearRecuerdo('concha', width * 0.22, height * 0.45, resueltos)
-    this.crearRecuerdo('huella', width * 0.5, height * 0.3, resueltos)
-    this.crearRecuerdo('semilla', width * 0.65, height * 0.67, resueltos)
+    this.crearRecuerdo('concha', resueltos)
+    this.crearRecuerdo('huella', resueltos)
+    this.crearRecuerdo('semilla', resueltos)
 
     // El Eco, en el camino hacia el faro. Aparece solo al acercarse.
     if (!resueltos.includes('eco')) {
-      const eco = this.add.image(width * 0.61, height * 0.42, 'eco').setDepth(9).setAlpha(0.85)
+      const eco = this.figura(LUGARES.eco.x, LUGARES.eco.y, 'eco').setDepth(9).setAlpha(0.85)
       this.tweens.add({
         targets: eco,
-        y: eco.y - 6,
+        y: eco.y - 8,
         alpha: 0.6,
         duration: 1400,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
       })
-      this.agregarInteractivo('eco', 'eco', eco, 75, true)
+      this.agregarInteractivo('eco', 'eco', eco, 110, true)
     }
 
     // Aviso que aparece sobre lo que está cerca
     this.avisoInteractuar = this.add
       .text(0, 0, ES_TACTIL ? 'Toca aquí para interactuar' : 'Pulsa E o toca para interactuar', {
         fontFamily: 'sans-serif',
-        fontSize: '14px',
+        fontSize: '20px',
         color: '#ffffff',
         backgroundColor: '#1c2833cc',
-        padding: ES_TACTIL ? { x: 12, y: 8 } : { x: 8, y: 4 },
+        padding: ES_TACTIL ? { x: 16, y: 10 } : { x: 12, y: 6 },
       })
       .setOrigin(0.5)
       .setDepth(20)
@@ -151,32 +186,31 @@ export class PuertoScene extends Phaser.Scene {
     })
 
     // Personaje del jugador y su compañero
-    const inicio = partida.posicion ?? { x: width * 0.3, y: height * 0.6 }
-    this.jugador = this.add.image(inicio.x, inicio.y, 'avatar').setDepth(10)
+    const inicio = this.posicionInicial(partida.posicion)
+    this.jugador = this.figura(inicio.x, inicio.y, 'avatar').setDepth(10)
     this.ultimaPosicionAvisada.set(inicio.x, inicio.y)
-    this.companero = this.add
-      .image(this.jugador.x - 34, this.jugador.y - 30, 'companero')
-      .setDepth(11)
+    this.companero = this.figura(inicio.x - 70, inicio.y - 70, 'companero').setDepth(11)
 
-    // La Bruma: más espesa al principio, se aclara con cada Recuerdo
-    this.bruma = this.add.rectangle(0, 0, width, height, 0xdfe6ec, 0.7)
+    // La Bruma: más espesa al principio, se aclara con cada Recuerdo.
+    // Es más grande que el mundo para cubrir también el mar de los lados.
+    this.bruma = this.add.rectangle(-1200, -900, MUNDO.ancho + 2400, MUNDO.alto + 1800, 0xdfe6ec, 0.7)
       .setOrigin(0)
       .setDepth(5)
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 12; i++) {
       const nube = this.add.ellipse(
-        Phaser.Math.Between(0, width),
-        Phaser.Math.Between(0, height),
-        Phaser.Math.Between(180, 320),
-        Phaser.Math.Between(80, 140),
+        Phaser.Math.Between(-100, MUNDO.ancho + 100),
+        Phaser.Math.Between(0, MUNDO.alto),
+        Phaser.Math.Between(280, 480),
+        Phaser.Math.Between(120, 200),
         0xffffff,
         0.35
       ).setDepth(6)
 
       this.tweens.add({
         targets: nube,
-        x: nube.x + Phaser.Math.Between(-120, 120),
-        duration: Phaser.Math.Between(4000, 7000),
+        x: nube.x + Phaser.Math.Between(-180, 180),
+        duration: Phaser.Math.Between(5000, 9000),
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -186,11 +220,17 @@ export class PuertoScene extends Phaser.Scene {
     }
     this.ajustarBruma(0)
 
-    this.add.text(16, 16, 'Isla de las Raíces', {
-      fontFamily: 'sans-serif',
-      fontSize: '20px',
-      color: '#ffffff',
-    }).setDepth(20)
+    this.add
+      .text(24, 20, 'Isla de las Raíces', {
+        fontFamily: 'sans-serif',
+        fontSize: '28px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        stroke: '#0e2a3d',
+        strokeThickness: 4,
+      })
+      .setScrollFactor(0)
+      .setDepth(20)
 
     // Controles: teclado (flechas o WASD), E o Espacio para interactuar, y toque o clic
     const teclado = this.input.keyboard!
@@ -204,8 +244,9 @@ export class PuertoScene extends Phaser.Scene {
         this.ignorarToque = false
         return
       }
-      this.destino = new Phaser.Math.Vector2(p.worldX, p.worldY)
-      this.marcarDestino(p.worldX, p.worldY)
+      const punto = haciaLaOrilla(p.worldX, p.worldY)
+      this.destino = new Phaser.Math.Vector2(punto.x, punto.y)
+      this.marcarDestino(punto.x, punto.y)
     })
 
     // Mensajes que llegan desde React (la historia)
@@ -247,6 +288,7 @@ export class PuertoScene extends Phaser.Scene {
     const limpiar = () => {
       document.removeEventListener('focusin', alEnfocar)
       document.removeEventListener('focusout', alDesenfocar)
+      this.scale.off('resize', centrar)
       EventBus.off('dialogo-abierto', alAbrirDialogo)
       EventBus.off('dialogo-cerrado', alCerrarDialogo)
       EventBus.off('pausar', alAbrirDialogo)
@@ -282,8 +324,7 @@ export class PuertoScene extends Phaser.Scene {
       // Movimiento con teclado
       this.destino = null
       const paso = new Phaser.Math.Vector2(dx, dy).normalize().scale(VELOCIDAD * dt)
-      this.jugador.x += paso.x
-      this.jugador.y += paso.y
+      this.mover(paso.x, paso.y)
     } else if (this.destino) {
       // Movimiento hacia donde se tocó la pantalla
       const distancia = Phaser.Math.Distance.Between(
@@ -296,20 +337,15 @@ export class PuertoScene extends Phaser.Scene {
           this.jugador.x, this.jugador.y, this.destino.x, this.destino.y
         )
         const avance = Math.min(VELOCIDAD * dt, distancia)
-        this.jugador.x += Math.cos(angulo) * avance
-        this.jugador.y += Math.sin(angulo) * avance
+        if (!this.mover(Math.cos(angulo) * avance, Math.sin(angulo) * avance)) this.destino = null
       }
     }
 
-    // Mantener al jugador dentro de la pantalla
-    this.jugador.x = Phaser.Math.Clamp(this.jugador.x, 32, this.scale.width - 32)
-    this.jugador.y = Phaser.Math.Clamp(this.jugador.y, 40, this.scale.height - 40)
-
     // El compañero sigue al jugador flotando suavemente
     const suavidad = Math.min(1, dt * 4)
-    const flotar = Math.sin(time / 300) * 4
-    this.companero.x += (this.jugador.x - 34 - this.companero.x) * suavidad
-    this.companero.y += (this.jugador.y - 30 + flotar - this.companero.y) * suavidad
+    const flotar = Math.sin(time / 300) * 6
+    this.companero.x += (this.jugador.x - 70 - this.companero.x) * suavidad
+    this.companero.y += (this.jugador.y - 70 + flotar - this.companero.y) * suavidad
 
     // ¿Hay algo cerca con qué interactuar?
     const cercano = this.interactivoCercano()
@@ -322,9 +358,7 @@ export class PuertoScene extends Phaser.Scene {
       cercano.automatico = false
       this.interactuar(cercano)
     } else if (cercano) {
-      this.avisoInteractuar
-        .setPosition(cercano.x, cercano.y + 52)
-        .setVisible(true)
+      this.avisoInteractuar.setPosition(cercano.x, cercano.y + 110).setVisible(true)
       if (pidioInteractuar) this.interactuar(cercano)
     } else {
       this.avisoInteractuar.setVisible(false)
@@ -338,9 +372,39 @@ export class PuertoScene extends Phaser.Scene {
       )
       if (movido > 2) {
         this.ultimaPosicionAvisada.set(this.jugador.x, this.jugador.y)
-        EventBus.emit('posicion', { x: Math.round(this.jugador.x), y: Math.round(this.jugador.y) })
+        const posicion: Posicion = { x: Math.round(this.jugador.x), y: Math.round(this.jugador.y), mundo: 2 }
+        EventBus.emit('posicion', posicion)
       }
     }
+  }
+
+  // Mueve al jugador sin dejarlo entrar al mar; si choca con la orilla, se desliza por ella
+  private mover(dx: number, dy: number) {
+    const { x, y } = this.jugador
+    if (sobreLaIsla(x + dx, y + dy)) {
+      this.jugador.setPosition(x + dx, y + dy)
+      return true
+    }
+    if (sobreLaIsla(x + dx, y)) {
+      this.jugador.x = x + dx
+      return true
+    }
+    if (sobreLaIsla(x, y + dy)) {
+      this.jugador.y = y + dy
+      return true
+    }
+    return false
+  }
+
+  // Posición guardada; las partidas del mundo anterior (800 × 600) se convierten
+  private posicionInicial(guardada: Posicion | null) {
+    if (!guardada) return LUGARES.inicio
+    const p = guardada.mundo === 2 ? guardada : { x: guardada.x * 2, y: guardada.y * 1.5 }
+    return sobreLaIsla(p.x, p.y) ? p : LUGARES.inicio
+  }
+
+  private figura(x: number, y: number, textura: string) {
+    return this.add.image(x, y, textura).setScale(ESCALA_PERSONAJE)
   }
 
   private agregarInteractivo(
@@ -348,17 +412,17 @@ export class PuertoScene extends Phaser.Scene {
     nudo: string,
     visual: Interactivo['visual'],
     radio: number,
-    automatico: boolean
+    automatico: boolean,
+    x = visual.x,
+    y = visual.y
   ) {
-    const interactivo: Interactivo = {
-      id, nudo, x: visual.x, y: visual.y, radio, visual, activo: true, automatico,
-    }
+    const interactivo: Interactivo = { id, nudo, x, y, radio, visual, activo: true, automatico }
     this.interactivos.push(interactivo)
 
     // Tocarlo: si está cerca, interactúa; si no, el jugador camina hacia allá.
-    // Las imágenes tienen un área de toque más grande que el dibujo, para los dedos.
+    // El área de toque es más grande que el dibujo, para los dedos.
     if (visual instanceof Phaser.GameObjects.Image) {
-      const area = new Phaser.Geom.Circle(visual.width / 2, visual.height / 2, 40)
+      const area = new Phaser.Geom.Circle(visual.width / 2, visual.height / 2, Math.max(visual.width, visual.height) * 0.55)
       visual.setInteractive({ hitArea: area, hitAreaCallback: Phaser.Geom.Circle.Contains, useHandCursor: true })
     } else {
       visual.setInteractive({ useHandCursor: true })
@@ -373,23 +437,24 @@ export class PuertoScene extends Phaser.Scene {
     })
   }
 
-  private crearRecuerdo(id: string, x: number, y: number, resueltos: string[]) {
+  private crearRecuerdo(id: 'concha' | 'huella' | 'semilla', resueltos: string[]) {
     if (resueltos.includes(id)) return
-    const objeto = this.add.image(x, y, id).setDepth(9)
+    const lugar = LUGARES[id]
+    const objeto = this.add.image(lugar.x, lugar.y, id).setScale(1.15).setDepth(9)
     this.tweens.add({
       targets: objeto,
-      scale: 1.15,
+      scale: 1.3,
       duration: 900,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     })
-    this.agregarInteractivo(id, `recuerdo_${id}`, objeto, 55, false)
+    this.agregarInteractivo(id, `recuerdo_${id}`, objeto, 85, false)
   }
 
   // Un pequeño anillo donde el jugador tocó, para que sepa hacia dónde camina
   private marcarDestino(x: number, y: number) {
-    const anillo = this.add.circle(x, y, 10).setStrokeStyle(2, 0xffffff, 0.9).setDepth(8)
+    const anillo = this.add.circle(x, y, 14).setStrokeStyle(3, 0xffffff, 0.9).setDepth(8)
     this.tweens.add({
       targets: anillo,
       scale: 2,
@@ -430,7 +495,12 @@ export class PuertoScene extends Phaser.Scene {
       interactivo.activo = false
       interactivo.visual.disableInteractive()
       this.tweens.killTweensOf(interactivo.visual)
-      this.tweens.add({ targets: interactivo.visual, alpha: 0, scale: 1.4, duration: 800 })
+      this.tweens.add({
+        targets: interactivo.visual,
+        alpha: 0,
+        scale: interactivo.visual.scale * 1.4,
+        duration: 800,
+      })
     }
     if (RECUERDOS.includes(id)) {
       this.recuerdosEncontrados += 1
@@ -441,28 +511,19 @@ export class PuertoScene extends Phaser.Scene {
   // La Bruma se aclara con cada Recuerdo y desaparece con el faro
   private ajustarBruma(duracion: number) {
     const fuerza = this.faroEncendido ? 0 : 1 - this.recuerdosEncontrados * 0.2
-    const brumaAlpha = 0.7 * fuerza
-    const nubesAlpha = fuerza
     if (duracion === 0) {
-      this.bruma.setAlpha(brumaAlpha / 0.7)
-      this.nubes.forEach((n) => n.setAlpha(nubesAlpha))
+      this.bruma.setAlpha(fuerza)
+      this.nubes.forEach((n) => n.setAlpha(fuerza))
       return
     }
-    this.tweens.add({ targets: this.bruma, alpha: brumaAlpha / 0.7, duration: duracion })
-    this.tweens.add({ targets: this.nubes, alpha: nubesAlpha, duration: duracion })
+    this.tweens.add({ targets: this.bruma, alpha: fuerza, duration: duracion })
+    this.tweens.add({ targets: this.nubes, alpha: fuerza, duration: duracion })
   }
 
   private encenderFaro() {
     if (this.faroEncendido) return
     this.faroEncendido = true
-    this.luzFaro.setFillStyle(0xffd54f)
-    this.tweens.add({
-      targets: this.luzFaro,
-      scale: 1.6,
-      duration: 500,
-      yoyo: true,
-      repeat: 2,
-    })
+    this.tweens.add({ targets: this.fondoEncendido, alpha: 1, duration: 1500, ease: 'Sine.easeInOut' })
     this.ajustarBruma(1500)
     EventBus.emit('faro-encendido', 'raices')
   }

@@ -1,6 +1,7 @@
 export interface Posicion {
   x: number
   y: number
+  mundo?: number // 2 = mundo panorámico de 1600 × 900
 }
 
 export interface Partida {
