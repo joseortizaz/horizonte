@@ -1,23 +1,30 @@
 // Isla de las Raíces.
-// El fondo es la ilustración de public/fondos (2400 × 1790), mostrada a 1600 × 1193.
-// Alrededor, el mar se extiende con el color de fondo del juego para ocupar toda
-// la pantalla, sin franjas a los lados.
+// El fondo es la ilustración de public/fondos (2576 × 1438), mostrada a 2190 × 1222.
+// La ilustración trae mar de sobra a los lados: la cámara enseña la parte central
+// (VISTA) y en pantallas más anchas o más altas se ve más mar de la propia imagen.
+// Más allá de la imagen, el color de fondo del juego coincide con el de sus bordes.
 // Más abajo quedan funciones para dibujar una versión en SVG (respaldo).
 
-export const MUNDO = { ancho: 1600, alto: 1193 }
+export const MUNDO = { ancho: 2190, alto: 1222 }
+
+// Tamaño base de lo que muestra la cámara (Phaser lo amplía según la pantalla)
+export const VISTA = { ancho: 1600, alto: 1000 }
 
 // Fondos ilustrados: faro apagado y faro encendido
 export const FONDOS = {
-  apagado: '/fondos/isla-raices-apagado.jpg',
-  encendido: '/fondos/isla-raices-encendido.jpg',
-  escala: 1600 / 2400,
+  apagado: '/fondos/isla-raices-2-apagado.jpg',
+  encendido: '/fondos/isla-raices-2-encendido.jpg',
+  escala: 2190 / 2576,
 }
 
 // Color del mar en los bordes de la ilustración (debe coincidir con el fondo de Phaser)
-export const COLOR_MAR = '#0568a5'
+export const COLOR_MAR = '#026aa4'
 
 // Zona caminable: una elipse algo más pequeña que la arena de la ilustración
-export const ISLA = { cx: 815, cy: 590, rx: 615, ry: 318 }
+export const ISLA = { cx: 1177, cy: 602, rx: 591, ry: 338 }
+
+// Zona caminable del mundo anterior (para convertir partidas guardadas)
+export const ISLA_ANTERIOR = { cx: 815, cy: 590, rx: 615, ry: 318 }
 
 // Números pseudoaleatorios con semilla: la isla se dibuja igual cada vez
 function generador(semilla: number) {

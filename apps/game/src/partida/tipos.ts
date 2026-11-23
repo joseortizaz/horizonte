@@ -1,7 +1,7 @@
 export interface Posicion {
   x: number
   y: number
-  mundo?: number // 2 = mundo panorámico de 1600 × 900
+  mundo?: number // 3 = isla actual (2190 × 1222); 2 = isla anterior; sin valor = primer mundo
 }
 
 export interface Partida {

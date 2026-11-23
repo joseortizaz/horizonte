@@ -4,7 +4,7 @@ import { avatarSvg, svgADataUri } from '../../avatar/dibujo'
 import { conchaSvg, ecoSvg, huellaSvg, semillaSvg } from '../personajes'
 import { IMAGENES } from '../../avatar/ilustrado'
 import type { AvatarIlustrado } from '../../avatar/ilustrado'
-import { FONDOS, ISLA, MUNDO } from '../arte/isla'
+import { FONDOS, ISLA, ISLA_ANTERIOR, MUNDO } from '../arte/isla'
 import type { Avatar } from '../../avatar/tipos'
 import type { Partida, Posicion } from '../../partida/tipos'
 
@@ -22,15 +22,15 @@ const ALTO_COMPANERO = { gota: 85, chispa: 105, pluma: 90, coral: 62 } as const
 // En pantallas táctiles los textos de ayuda hablan de tocar, no de teclas
 const ES_TACTIL = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
-// Lugares de la isla (coordenadas del mundo de 1600 × 1193, sobre la ilustración)
+// Lugares de la isla (coordenadas del mundo de 2190 × 1222, sobre la ilustración)
 const LUGARES = {
-  inicio: { x: 960, y: 610 },
-  faro: { x: 1205, y: 354 },
-  marea: { x: 694, y: 683 },
-  concha: { x: 347, y: 578 },
-  huella: { x: 831, y: 376 },
-  semilla: { x: 1047, y: 809 },
-  eco: { x: 1000, y: 395 },
+  inicio: { x: 1148, y: 612 },
+  faro: { x: 1554, y: 370 },
+  marea: { x: 901, y: 655 },
+  concha: { x: 748, y: 706 },
+  huella: { x: 1173, y: 357 },
+  semilla: { x: 1275, y: 791 },
+  eco: { x: 1411, y: 459 },
 }
 
 // ¿El punto está sobre la isla? (fuera de ella está el mar)
@@ -120,7 +120,9 @@ export class PuertoScene extends Phaser.Scene {
     this.nubes = []
 
     // La cámara mira siempre al centro de la isla, aunque la pantalla sea más ancha
-    const centrar = () => this.cameras.main.centerOn(MUNDO.ancho / 2, MUNDO.alto / 2)
+    // (sin salirse de la ilustración mientras la pantalla quepa dentro de ella)
+    this.cameras.main.setBounds(0, 0, MUNDO.ancho, MUNDO.alto)
+    const centrar = () => this.cameras.main.centerOn(ISLA.cx, ISLA.cy)
     centrar()
     this.scale.on('resize', centrar)
 
@@ -419,7 +421,7 @@ export class PuertoScene extends Phaser.Scene {
       )
       if (movido > 2) {
         this.ultimaPosicionAvisada.set(this.jugador.x, this.jugador.y)
-        const posicion: Posicion = { x: Math.round(this.jugador.x), y: Math.round(this.jugador.y), mundo: 2 }
+        const posicion: Posicion = { x: Math.round(this.jugador.x), y: Math.round(this.jugador.y), mundo: 3 }
         EventBus.emit('posicion', posicion)
       }
     }
@@ -443,10 +445,19 @@ export class PuertoScene extends Phaser.Scene {
     return false
   }
 
-  // Posición guardada; las partidas del mundo anterior (800 × 600) se convierten
+  // Posición guardada; las partidas de mundos anteriores se convierten a la isla actual
   private posicionInicial(guardada: Posicion | null) {
     if (!guardada) return LUGARES.inicio
-    const p = guardada.mundo === 2 ? guardada : { x: guardada.x * 2, y: guardada.y * 1.5 }
+    let p = { x: guardada.x, y: guardada.y }
+    if (guardada.mundo !== 3) {
+      // mundo 1 (800 × 600) → mundo 2 → isla actual, conservando el lugar relativo en la isla
+      const m2 = guardada.mundo === 2 ? p : { x: p.x * 2, y: p.y * 1.5 }
+      const A = ISLA_ANTERIOR
+      p = {
+        x: ISLA.cx + ((m2.x - A.cx) / A.rx) * ISLA.rx,
+        y: ISLA.cy + ((m2.y - A.cy) / A.ry) * ISLA.ry,
+      }
+    }
     return sobreLaIsla(p.x, p.y) ? p : LUGARES.inicio
   }
 
