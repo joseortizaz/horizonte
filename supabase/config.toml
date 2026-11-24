@@ -431,3 +431,6 @@ enabled = true
 # La función de avisos la llama la base de datos con su propio secreto, no un usuario
 [functions.avisar-alerta]
 verify_jwt = false
+
+[functions.recordatorio-diario]
+verify_jwt = false

@@ -151,6 +151,47 @@ function TarjetaRuta({ meta, onRevisada, onApoyo }: {
   )
 }
 
+// Interruptor del recordatorio semanal por correo
+function Recordatorios() {
+  const [activo, setActivo] = useState<boolean | null>(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let vivo = true
+    void supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return
+      const { data: perfil } = await supabase.from('profiles').select('recordatorios').eq('id', data.user.id).single()
+      if (vivo && perfil) setActivo((perfil as { recordatorios: boolean }).recordatorios)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
+
+  async function cambiar(valor: boolean) {
+    const anterior = activo
+    setActivo(valor)
+    setError(false)
+    const { data } = await supabase.auth.getUser()
+    const { error } = await supabase.from('profiles').update({ recordatorios: valor }).eq('id', data.user?.id ?? '')
+    if (error) {
+      setActivo(anterior)
+      setError(true)
+    }
+  }
+
+  if (activo === null) return null
+  return (
+    <section className="diario-recordatorio">
+      <label>
+        <input type="checkbox" checked={activo} onChange={(e) => void cambiar(e.target.checked)} />
+        Recordarme por correo los sábados si tengo rutas sin revisar
+      </label>
+      {error && <p className="auth-error">No se pudo guardar el cambio. Revisa tu conexión.</p>}
+    </section>
+  )
+}
+
 export function Diario({ desbloqueado, onCerrar, onInsignia, onCambio }: Props) {
   const { datos, error, recargar } = useDiario()
   const [trazando, setTrazando] = useState(false)
@@ -250,6 +291,8 @@ export function Diario({ desbloqueado, onCerrar, onInsignia, onCambio }: Props) 
                 + Trazar una nueva ruta
               </button>
             )}
+
+            <Recordatorios />
 
             {otras.length > 0 && (
               <section className="diario-anteriores">

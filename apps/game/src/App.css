@@ -1829,6 +1829,22 @@ body:has(.panel) {
   margin-bottom: 16px;
 }
 
+.diario-recordatorio {
+  margin: 18px 0 4px;
+  font-size: 0.95rem;
+}
+.diario-recordatorio label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  cursor: pointer;
+}
+.diario-recordatorio input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .diario-anteriores {
   margin-top: 8px;
 }
