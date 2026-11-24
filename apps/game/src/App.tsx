@@ -32,6 +32,7 @@ const RESUELTOS: Record<string, string> = {
   huella: 'tiene_huella',
   semilla: 'tiene_semilla',
   eco: 'eco_resuelto',
+  'marea-despedida': 'insignia_autoconocimiento',
 }
 
 export default function App() {
@@ -320,7 +321,11 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
       if (encendidos.includes(id)) return
       narrativa.fijarVariable('faro_encendido', true)
       setFaros(encendidos.length + 1)
-      setMensaje('¡El Faro de las Raíces brilla! Vuelve con Marea.')
+      setMensaje(
+        narrativa.leerVariable('conoce_a_marea')
+          ? '¡El Faro de las Raíces brilla! Vuelve con Marea.'
+          : '¡El Faro de las Raíces brilla! Busca a Marea, la mujer del bastón, en la orilla.'
+      )
       void guardar({ faros: [...encendidos, id], narrativa: narrativa.guardarEstado() })
     }
 

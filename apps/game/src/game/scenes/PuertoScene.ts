@@ -154,7 +154,7 @@ export class PuertoScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setDepth(20)
-      .setVisible(!resueltos.includes('marea'))
+      .setVisible(this.mareaEspera(resueltos))
     this.tweens.add({
       targets: this.indicadorMarea,
       y: this.indicadorMarea.y - 8,
@@ -586,9 +586,15 @@ export class PuertoScene extends Phaser.Scene {
     this.tweens.add({ targets: this.nubes, alpha: fuerza, duration: duracion })
   }
 
+  // Marea tiene algo que decir: al principio y, con el faro encendido, la despedida del Acto I
+  private mareaEspera(resueltos: string[]) {
+    return !resueltos.includes('marea') || (this.faroEncendido && !resueltos.includes('marea-despedida'))
+  }
+
   private encenderFaro() {
     if (this.faroEncendido) return
     this.faroEncendido = true
+    this.indicadorMarea.setVisible(true) // vuelve el "!": Marea quiere verlo
     this.tweens.add({ targets: this.fondoEncendido, alpha: 1, duration: 1500, ease: 'Sine.easeInOut' })
     this.ajustarBruma(1500)
     EventBus.emit('faro-encendido', 'raices')

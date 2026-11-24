@@ -66,7 +66,14 @@ Muévete con las flechas, con WASD o tocando la pantalla. Acércate a las person
     -> reencuentro
 }
 ~ conoce_a_marea = true
+// Si ya encendió el faro sin pasar por aquí, Marea lo reconoce y lo despide
+{ faro_encendido:
+    -> primer_encuentro_faro
+}
 Vaya, vaya... Un Navegante con la brújula en blanco. # hablante: Marea
+{ recuerdos > 0:
+    Aunque veo que ya empezaste a buscar por tu cuenta: llevas {recuerdos} de tres Recuerdos. # hablante: Marea
+}
 Hacía muchas mareas que nadie llegaba a la Isla de las Raíces. # hablante: Marea
 ¿Qué te trajo hasta aquí? # hablante: Marea
 
@@ -83,7 +90,11 @@ Hacía muchas mareas que nadie llegaba a la Isla de las Raíces. # hablante: Mar
 
 - La Bruma cubre esta isla desde hace mucho tiempo. Dicen que se disipa cuando alguien enciende el faro. # hablante: Marea
 Pero el faro no se enciende con fuerza, sino con memoria. # hablante: Marea
-Por la isla hay tres Recuerdos perdidos. Son tuyos, aunque todavía no lo sepas. # hablante: Marea
+{ recuerdos > 0:
+    Esos destellos que encontraste son Recuerdos. Son tuyos, aunque todavía no lo sepas. # hablante: Marea
+- else:
+    Por la isla hay tres Recuerdos perdidos. Son tuyos, aunque todavía no lo sepas. # hablante: Marea
+}
 
 * [¿Recuerdos míos? ¿Cómo pueden estar aquí?]
     Esta isla guarda lo que te formó: personas, momentos, gustos. Todo lo que traes contigo sin darte cuenta. # hablante: Marea
@@ -91,9 +102,31 @@ Por la isla hay tres Recuerdos perdidos. Son tuyos, aunque todavía no lo sepas.
     ~ curiosidad += 1
     Entonces sabrás qué quieres cambiar. Eso también es una raíz. # hablante: Marea
 
-- Busca los destellos entre la Bruma. # hablante: Marea
-Y ten cuidado con los Ecos: repiten lo que otros esperan de ti, hasta que crees que es tu propia voz. # hablante: Marea # evento: mision-recuerdos
+- { recuerdos == 3:
+    Y tú ya los tienes todos. El faro te espera al noreste: llévaselos. # hablante: Marea
+- else:
+    Busca los destellos entre la Bruma. # hablante: Marea
+    Y ten cuidado con los Ecos: repiten lo que otros esperan de ti, hasta que crees que es tu propia voz. # hablante: Marea # evento: mision-recuerdos
+}
 -> DONE
+
+// Primer encuentro cuando el faro ya está encendido
+= primer_encuentro_faro
+Así que fuiste tú quien encendió el faro... # hablante: Marea
+Soy Marea, la guardiana de esta isla. Pocas veces alguien llega tan lejos sin que nadie le muestre el camino. # hablante: Marea
+Dime, ¿qué te trajo hasta aquí? # hablante: Marea
+
+* [Vine a buscar respuestas.]
+    ~ motivo_llegada = "respuestas"
+    ~ curiosidad += 1
+* [La verdad, no lo sé. Simplemente llegué.]
+    ~ motivo_llegada = "no-se"
+    No saber también es un buen comienzo. # hablante: Marea
+* [Me dijeron que tenía que venir.]
+    ~ motivo_llegada = "otros"
+    Muchos llegan empujados por voces ajenas. Lo importante es que el faro lo encendiste tú. # hablante: Marea
+
+- -> despedida
 
 = reencuentro
 {
@@ -294,5 +327,9 @@ Antes de encenderlo, piensa en algo: con todo lo que recordaste... ¿qué quiere
 - Una luz dorada sube por la torre. La Bruma se retira como la marea cuando baja. # evento: encender-faro
 ~ faro_encendido = true
 Tu brújula... ¡mira! La aguja empezó a moverse. # hablante: companero
-Volvamos con Marea. Querrá verlo. # hablante: companero
+{ conoce_a_marea:
+    Volvamos con Marea. Querrá verlo. # hablante: companero
+- else:
+    En la orilla hay alguien con un bastón: Marea, la guardiana de la isla. Querrá verlo. # hablante: companero
+}
 -> DONE
