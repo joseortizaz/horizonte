@@ -21,6 +21,9 @@ import { supabase } from './lib/supabase'
 import { useConsentimiento } from './consentimiento/useConsentimiento'
 import { EsperaConsentimiento } from './consentimiento/EsperaConsentimiento'
 import { MensajesAcompanamiento } from './riesgo/MensajesAcompanamiento'
+import { PantallaApoyo } from './riesgo/PantallaApoyo'
+import { Cuestionario } from './evaluacion/Cuestionario'
+import type { EvaluacionPendiente } from './evaluacion/Cuestionario'
 import './App.css'
 
 const GUARDADO_POSICION_MS = 15000
@@ -201,6 +204,54 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
     EventBus.emit('reanudar')
   }, [])
 
+  // Cuestionario de evaluación del piloto (voluntario)
+  const [evaluacion, setEvaluacion] = useState<EvaluacionPendiente | null>(null)
+  const [apoyo, setApoyo] = useState<'moderado' | 'alto' | null>(null)
+  const consultaEvaluacion = useRef<Promise<EvaluacionPendiente | null> | null>(null)
+  const prologoTrasEvaluacion = useRef(false) // el prólogo espera a que termine el cuestionario inicial
+  const ofrecerAlCerrarDialogo = useRef(false) // al terminar el Acto I
+
+  const buscarEvaluacion = useCallback(async () => {
+    const { data, error } = await supabase.rpc('evaluacion_pendiente')
+    if (error || !data) return null
+    const e = data as EvaluacionPendiente
+    return e.items?.length ? e : null
+  }, [])
+
+  useEffect(() => {
+    consultaEvaluacion.current = buscarEvaluacion()
+  }, [buscarEvaluacion])
+
+  const abrirEvaluacion = useCallback((e: EvaluacionPendiente) => {
+    EventBus.emit('pausar')
+    setEvaluacion(e)
+  }, [])
+
+  const continuarTrasEvaluacion = useCallback(() => {
+    EventBus.emit('reanudar')
+    if (prologoTrasEvaluacion.current) {
+      prologoTrasEvaluacion.current = false
+      EventBus.emit('hablar', 'prologo')
+    }
+  }, [])
+
+  const cerrarEvaluacion = useCallback(
+    (nivel: string) => {
+      setEvaluacion(null)
+      if (nivel === 'moderado' || nivel === 'alto') {
+        setApoyo(nivel) // primero la pantalla de apoyo; el juego sigue al cerrarla
+        return
+      }
+      continuarTrasEvaluacion()
+    },
+    [continuarTrasEvaluacion]
+  )
+
+  const cerrarApoyo = useCallback(() => {
+    setApoyo(null)
+    continuarTrasEvaluacion()
+  }, [continuarTrasEvaluacion])
+
   const abrirDiario = () => {
     if (dialogoAbierto.current) return
     EventBus.emit('pausar')
@@ -276,6 +327,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
           otorgarInsignia(valor)
         } else if (tipo === 'fin-acto-1') {
           setMensaje('Fin del Acto I. Tu brújula ya se mueve: abre tu Diario de Navegación y traza tus rutas.')
+          ofrecerAlCerrarDialogo.current = true
         }
       }
       contadorPasos.current += 1
@@ -294,7 +346,16 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
     setDialogo(null)
     EventBus.emit('dialogo-cerrado')
     void guardar({ narrativa: narrativa.guardarEstado() })
-  }, [guardar, narrativa])
+    // Al cerrar el Acto I se ofrece el cuestionario final (cuando la insignia ya quedó guardada)
+    if (ofrecerAlCerrarDialogo.current) {
+      ofrecerAlCerrarDialogo.current = false
+      window.setTimeout(() => {
+        void buscarEvaluacion().then((e) => {
+          if (e && e.momento === 'fin_acto1' && !dialogoAbierto.current) abrirEvaluacion(e)
+        })
+      }, 2000)
+    }
+  }, [guardar, narrativa, buscarEvaluacion, abrirEvaluacion])
 
   useEffect(() => {
     // Guarda la última posición conocida, si hay una pendiente
@@ -329,9 +390,22 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
       void guardar({ faros: [...encendidos, id], narrativa: narrativa.guardarEstado() })
     }
 
-    // Primera vez en la isla: el prólogo empieza solo
+    // Primera vez en la isla: el prólogo empieza solo (antes, el cuestionario inicial si lo acepta).
+    // En otras visitas, si hay un cuestionario pendiente, se ofrece al poco de llegar.
     const alEscenaLista = () => {
-      if (!narrativa.leerVariable('prologo_visto')) alHablar('prologo')
+      void (consultaEvaluacion.current ?? Promise.resolve(null)).then((e) => {
+        const sinPrologo = !narrativa.leerVariable('prologo_visto')
+        if (e && e.momento === 'inicio' && sinPrologo) {
+          prologoTrasEvaluacion.current = true
+          abrirEvaluacion(e)
+        } else if (sinPrologo) {
+          alHablar('prologo')
+        } else if (e && e.momento !== 'inicio') {
+          window.setTimeout(() => {
+            if (!dialogoAbierto.current) abrirEvaluacion(e)
+          }, 1500)
+        }
+      })
     }
 
     const alOcultarse = () => {
@@ -354,7 +428,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
       document.removeEventListener('visibilitychange', alOcultarse)
       window.clearInterval(intervalo)
     }
-  }, [actual, guardar, mostrarPaso, narrativa])
+  }, [actual, guardar, mostrarPaso, narrativa, abrirEvaluacion])
 
   return (
     <div className="app">
@@ -426,6 +500,9 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
           onCambio={() => void revisarPendientes()}
         />
       )}
+
+      {evaluacion && <Cuestionario evaluacion={evaluacion} onCerrar={cerrarEvaluacion} />}
+      {apoyo && <PantallaApoyo nivel={apoyo} onCerrar={cerrarApoyo} />}
 
       {bitacoraAbierta && (
         <Bitacora

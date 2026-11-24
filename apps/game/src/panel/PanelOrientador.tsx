@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { AlertasPanel } from './AlertasPanel'
+import { EvaluacionPanel } from './EvaluacionPanel'
 
 interface Grupo {
   id: string
@@ -296,6 +297,8 @@ export function PanelOrientador({ nombre }: { nombre: string }) {
               </table>
             </div>
           )}
+
+          <EvaluacionPanel grupoId={grupo.id} />
 
           <p className="bitacora-pie">
             Por privacidad, este panel muestra solo el avance. Las respuestas de los jóvenes y su Bitácora

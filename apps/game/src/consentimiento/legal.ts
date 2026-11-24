@@ -22,6 +22,7 @@ export const QUE_DATOS = [
   'Nombre o apodo, correo electrónico y fecha de nacimiento.',
   'El personaje que crea y su avance en el juego.',
   'Las opciones que elige en las conversaciones del juego (por ejemplo, qué le apasiona o qué valora).',
+  'Sus respuestas a un cuestionario breve y voluntario (al empezar, al terminar la primera isla y un mes después), que se usan sin su nombre para evaluar si el programa ayuda a los jóvenes.',
   'No pedimos dirección, cédula, fotos ni datos de pago. No hay chat con otras personas ni publicidad.',
   'De ti, como tutor: tu nombre, tu relación con el joven y un teléfono de contacto.',
 ]
