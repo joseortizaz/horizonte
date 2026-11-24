@@ -1,7 +1,6 @@
 import * as Phaser from 'phaser'
 import { EventBus } from '../EventBus'
 import { avatarSvg, svgADataUri } from '../../avatar/dibujo'
-import { conchaSvg, ecoSvg, huellaSvg, semillaSvg } from '../personajes'
 import { IMAGENES } from '../../avatar/ilustrado'
 import type { AvatarIlustrado } from '../../avatar/ilustrado'
 import { FONDOS, ISLA, ISLA_ANTERIOR, MUNDO } from '../arte/isla'
@@ -17,6 +16,8 @@ const ESCALA_PERSONAJE = 1.15
 // Altura en pantalla de los personajes ilustrados (en píxeles del mundo)
 const ALTO_JUGADOR = 190
 const ALTO_MAREA = 200
+const ALTO_ECO = 200
+const ALTO_RECUERDO = 66
 // Altura en pantalla de cada compañero (Chispa incluye su halo de luz)
 const ALTO_COMPANERO = { gota: 85, chispa: 105, pluma: 90, coral: 62 } as const
 // En pantallas táctiles los textos de ayuda hablan de tocar, no de teclas
@@ -98,10 +99,10 @@ export class PuertoScene extends Phaser.Scene {
     if (!this.registry.get('avatarImagen')) svg('avatar', avatarSvg(avatar.apariencia))
     this.load.image('companero', IMAGENES[avatar.companero])
     this.load.image('marea', IMAGENES.marea)
-    svg('eco', ecoSvg())
-    svg('concha', conchaSvg())
-    svg('huella', huellaSvg())
-    svg('semilla', semillaSvg())
+    this.load.image('eco', IMAGENES.eco)
+    this.load.image('concha', IMAGENES.concha)
+    this.load.image('huella', IMAGENES.huella)
+    this.load.image('semilla', IMAGENES.semilla)
   }
 
   create() {
@@ -170,7 +171,7 @@ export class PuertoScene extends Phaser.Scene {
 
     // El Eco, en el camino hacia el faro. Aparece solo al acercarse.
     if (!resueltos.includes('eco')) {
-      const eco = this.figura(LUGARES.eco.x, LUGARES.eco.y, 'eco').setDepth(9).setAlpha(0.85)
+      const eco = this.figura(LUGARES.eco.x, LUGARES.eco.y, 'eco', ALTO_ECO).setDepth(9).setAlpha(0.85)
       this.tweens.add({
         targets: eco,
         y: eco.y - 8,
@@ -505,10 +506,10 @@ export class PuertoScene extends Phaser.Scene {
   private crearRecuerdo(id: 'concha' | 'huella' | 'semilla', resueltos: string[]) {
     if (resueltos.includes(id)) return
     const lugar = LUGARES[id]
-    const objeto = this.add.image(lugar.x, lugar.y, id).setScale(1.15).setDepth(9)
+    const objeto = this.figura(lugar.x, lugar.y, id, ALTO_RECUERDO).setDepth(9)
     this.tweens.add({
       targets: objeto,
-      scale: 1.3,
+      scale: objeto.scale * 1.12,
       duration: 900,
       yoyo: true,
       repeat: -1,

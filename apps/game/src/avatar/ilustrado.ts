@@ -187,4 +187,8 @@ export const IMAGENES = {
   chispa: '/personajes/companero-chispa.png',
   pluma: '/personajes/companero-pluma.png',
   coral: '/personajes/companero-coral.png',
+  eco: '/personajes/eco.png',
+  concha: '/personajes/recuerdo-concha.png',
+  huella: '/personajes/recuerdo-huella.png',
+  semilla: '/personajes/recuerdo-semilla.png',
 }
