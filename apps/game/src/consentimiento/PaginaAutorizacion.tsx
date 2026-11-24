@@ -123,7 +123,14 @@ export function PaginaAutorizacion() {
                 <li key={t}>{t}</li>
               ))}
             </ul>
-            {CONTACTO_PROYECTO && <p>Para preguntas o para retirar la autorización: {CONTACTO_PROYECTO}</p>}
+            <p>
+              Para preguntas o para retirar la autorización, escriba a {CONTACTO_PROYECTO.nombre}:{' '}
+              <a href={`mailto:${CONTACTO_PROYECTO.correo}`}>{CONTACTO_PROYECTO.correo}</a> o por WhatsApp al{' '}
+              <a href={CONTACTO_PROYECTO.whatsappEnlace} target="_blank" rel="noreferrer">
+                {CONTACTO_PROYECTO.whatsapp}
+              </a>
+              .
+            </p>
 
             <label>
               Tu nombre completo

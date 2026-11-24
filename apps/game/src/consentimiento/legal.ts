@@ -4,8 +4,13 @@
 
 export const TERMINOS_VERSION = '2026-11-borrador-2'
 
-// Correo o teléfono de contacto del proyecto. Mientras esté vacío, no se muestra.
-export const CONTACTO_PROYECTO = ''
+// Contacto del proyecto para tutores y jóvenes (preguntas, retiro de la autorización, borrado de datos)
+export const CONTACTO_PROYECTO = {
+  nombre: 'Soporte Proyéctate',
+  correo: 'contacto@proyectate.app',
+  whatsapp: '+1 829 374 8878',
+  whatsappEnlace: 'https://wa.me/18293748878',
+}
 
 export const QUE_ES = [
   'Proyéctate es un juego de aventura para jóvenes, creado por un equipo de psicología y tecnología.',
