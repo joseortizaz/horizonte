@@ -4,7 +4,7 @@ import { avatarSvg, svgADataUri } from '../../avatar/dibujo'
 import { IMAGENES } from '../../avatar/ilustrado'
 import type { AvatarIlustrado } from '../../avatar/ilustrado'
 import { FONDOS, ISLA, ISLA_ANTERIOR, MUNDO } from '../arte/isla'
-import { barcaSvg } from '../arte/barca'
+import { BARCA, vestirBarca } from '../arte/barcaIlustrada'
 import { velaActual } from '../estado'
 import type { Avatar } from '../../avatar/tipos'
 import type { Partida, Posicion } from '../../partida/tipos'
@@ -107,7 +107,7 @@ export class PuertoScene extends Phaser.Scene {
     this.load.image('concha', IMAGENES.concha)
     this.load.image('huella', IMAGENES.huella)
     this.load.image('semilla', IMAGENES.semilla)
-    if (!this.textures.exists('barca')) this.load.svg('barca', svgADataUri(barcaSvg(velaActual())), { scale: RESOLUCION })
+    if (!this.textures.exists('barca')) this.load.image('barca', BARCA)
   }
 
   create() {
@@ -170,7 +170,8 @@ export class PuertoScene extends Phaser.Scene {
     })
 
     // La barca, en la orilla sur: lleva al Archipiélago de los Oficios cuando termina el Acto I
-    this.barca = this.add.image(LUGARES.muelle.x, LUGARES.muelle.y + 95, 'barca').setScale(0.6).setDepth(4)
+    this.barca = this.add.image(LUGARES.muelle.x, LUGARES.muelle.y + 95, 'barca').setScale(0.5).setDepth(4)
+    void vestirBarca(this, this.barca, velaActual())
     this.tweens.add({ targets: this.barca, angle: 2, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
     this.agregarInteractivo('muelle', 'muelle_raices', this.barca, 130, false, LUGARES.muelle.x, LUGARES.muelle.y)
 
@@ -314,10 +315,7 @@ export class PuertoScene extends Phaser.Scene {
     const alResolver = (id: string) => this.resolver(id)
     const alEncenderFaro = () => this.encenderFaro()
     const alCambiarVela = (vela: string[] | null) => {
-      const clave = `barca-${Date.now()}`
-      this.load.svg(clave, svgADataUri(barcaSvg(vela)), { scale: RESOLUCION })
-      this.load.once(Phaser.Loader.Events.COMPLETE, () => this.barca?.setTexture(clave))
-      this.load.start()
+      if (this.barca) void vestirBarca(this, this.barca, vela)
     }
     // Viaje a otra región: la escena de destino arranca con la partida actualizada
     const alCambiarEscena = (datos: { escena: string; partida: Partida; resueltos: string[] }) => {

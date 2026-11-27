@@ -1,7 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PropsJuego } from '../TallerOficio'
-import { barcaSvg } from '../../game/arte/barca'
-import { svgADataUri } from '../../avatar/dibujo'
+import { BARCA, generarBarca } from '../../game/arte/barcaIlustrada'
 
 // Taller de colores (artístico): diseñar la vela de la barca en una cuadrícula de 6 × 6.
 // No hay respuestas correctas; el diseño se guarda y la barca lo lleva puesto.
@@ -29,6 +28,20 @@ export function Vela({ onFin }: PropsJuego) {
 
   const coloresUsados = new Set(celdas).size
 
+  // Vista previa de la barca con la vela pintada (se actualiza poco después de cada cambio)
+  const [vista, setVista] = useState(BARCA)
+  const clave = celdas.join(',')
+  useEffect(() => {
+    let vivo = true
+    const t = window.setTimeout(() => {
+      void generarBarca(clave.split(',')).then((url) => vivo && setVista(url))
+    }, 120)
+    return () => {
+      vivo = false
+      window.clearTimeout(t)
+    }
+  }, [clave])
+
   return (
     <section className="juego">
       <p className="juego-instruccion">
@@ -54,7 +67,7 @@ export function Vela({ onFin }: PropsJuego) {
             />
           ))}
         </div>
-        <img className="vela-vista" src={svgADataUri(barcaSvg(celdas))} alt="Así se verá tu barca" />
+        <img className="vela-vista" src={vista} alt="Así se verá tu barca" />
       </div>
       <div className="vela-paleta">
         {COLORES.map((c) => (

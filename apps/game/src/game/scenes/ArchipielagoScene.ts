@@ -4,7 +4,8 @@ import { avatarSvg, svgADataUri } from '../../avatar/dibujo'
 import { IMAGENES } from '../../avatar/ilustrado'
 import type { AvatarIlustrado } from '../../avatar/ilustrado'
 import { COLOR_MAR } from '../arte/isla'
-import { barcaSvg, faroPequenoSvg, personaSvg } from '../arte/barca'
+import { faroPequenoSvg, personaSvg } from '../arte/barca'
+import { BARCA, CUBIERTA, vestirBarca } from '../arte/barcaIlustrada'
 import { velaActual } from '../estado'
 import type { Avatar } from '../../avatar/tipos'
 import type { Partida, Posicion } from '../../partida/tipos'
@@ -97,7 +98,7 @@ export class ArchipielagoScene extends Phaser.Scene {
     if (!this.registry.get('avatarImagen') && !this.textures.exists('avatar')) svg('avatar', avatarSvg(avatar.apariencia))
     if (!this.textures.exists('companero')) this.load.image('companero', IMAGENES[avatar.companero])
     if (!this.textures.exists('eco')) this.load.image('eco', IMAGENES.eco)
-    svg('barca', barcaSvg(velaActual()))
+    if (!this.textures.exists('barca')) this.load.image('barca', BARCA)
     svg('faro-apagado', faroPequenoSvg(false))
     svg('faro-encendido', faroPequenoSvg(true))
     svg('brisa', personaSvg('#2874a6', '#d9a066', '#7b4a24'))
@@ -176,7 +177,8 @@ export class ArchipielagoScene extends Phaser.Scene {
 
     // --- Barca del jugador, su personaje y el compañero ---
     const inicio = this.posicionInicial(partida.posicion)
-    this.barca = this.add.image(inicio.x, inicio.y, 'barca').setScale(0.5).setDepth(9)
+    this.barca = this.add.image(inicio.x, inicio.y, 'barca').setScale(0.45).setDepth(9)
+    void vestirBarca(this, this.barca, velaActual())
     const forma = this.registry.get('avatarForma') as AvatarIlustrado | null
     this.avatarEnBarca = this.add.image(inicio.x, inicio.y, 'avatar').setDepth(10)
     if (avatarImagen && forma) {
@@ -331,7 +333,10 @@ export class ArchipielagoScene extends Phaser.Scene {
     // La barca se mece; el personaje va encima y el compañero vuela al lado
     const meneo = Math.sin(time / 500) * 3
     this.barca.setAngle(Math.sin(time / 700) * 2)
-    this.avatarEnBarca.setPosition(this.barca.x + 4, this.barca.y + 18 + meneo)
+    // El personaje va de pie en la cubierta (la barca se voltea según hacia dónde navega)
+    const lado = this.barca.flipX ? -1 : 1
+    this.avatarEnBarca.setPosition(this.barca.x + CUBIERTA.x * 0.45 * lado, this.barca.y + CUBIERTA.y * 0.45 + meneo)
+    this.avatarEnBarca.setDepth(this.barca.depth + 0.5)
     const suavidad = Math.min(1, dt * 4)
     this.companero.x += (this.barca.x - 80 - this.companero.x) * suavidad
     this.companero.y += (this.barca.y - 90 + Math.sin(time / 300) * 6 - this.companero.y) * suavidad
@@ -537,9 +542,6 @@ export class ArchipielagoScene extends Phaser.Scene {
   }
 
   private cambiarVela(vela: string[] | null) {
-    const clave = `barca-${Date.now()}`
-    this.load.svg(clave, svgADataUri(barcaSvg(vela)), { scale: RESOLUCION })
-    this.load.once(Phaser.Loader.Events.COMPLETE, () => this.barca?.setTexture(clave))
-    this.load.start()
+    if (this.barca) void vestirBarca(this, this.barca, vela)
   }
 }
