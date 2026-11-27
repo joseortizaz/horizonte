@@ -34,7 +34,7 @@ const LUGARES = {
   huella: { x: 1173, y: 357 },
   semilla: { x: 1275, y: 791 },
   eco: { x: 1411, y: 459 },
-  muelle: { x: 1000, y: 900 }, // en la arena, junto a la barca
+  muelle: { x: 1060, y: 890 }, // en la arena, junto a la barca
 }
 
 // ¿El punto está sobre la isla? (fuera de ella está el mar)
@@ -170,10 +170,11 @@ export class PuertoScene extends Phaser.Scene {
     })
 
     // La barca, en la orilla sur: lleva al Archipiélago de los Oficios cuando termina el Acto I
-    this.barca = this.add.image(LUGARES.muelle.x, LUGARES.muelle.y + 95, 'barca').setScale(0.5).setDepth(4)
+    this.barca = this.add.image(LUGARES.muelle.x - 50, LUGARES.muelle.y + 80, 'barca').setScale(0.5).setDepth(4)
     void vestirBarca(this, this.barca, velaActual())
     this.tweens.add({ targets: this.barca, angle: 2, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-    this.agregarInteractivo('muelle', 'muelle_raices', this.barca, 130, false, LUGARES.muelle.x, LUGARES.muelle.y)
+    // Zona amplia: la barca es ancha y se puede llegar a ella desde cualquier punto de la orilla cercana
+    this.agregarInteractivo('muelle', 'muelle_raices', this.barca, 230, false, LUGARES.muelle.x, LUGARES.muelle.y)
 
     // Los tres Recuerdos, brillando entre la Bruma
     this.crearRecuerdo('concha', resueltos)
@@ -434,7 +435,9 @@ export class PuertoScene extends Phaser.Scene {
       cercano.automatico = false
       this.interactuar(cercano)
     } else if (cercano) {
-      this.avisoInteractuar.setPosition(cercano.x, cercano.y + 110).setVisible(true)
+      // Junto a la barca, el aviso va sobre el jugador (abajo está el mar)
+      if (cercano.id === 'muelle') this.avisoInteractuar.setPosition(this.jugador.x, this.jugador.y - 140).setVisible(true)
+      else this.avisoInteractuar.setPosition(cercano.x, cercano.y + 110).setVisible(true)
       if (pidioInteractuar) this.interactuar(cercano)
     } else {
       this.avisoInteractuar.setVisible(false)
