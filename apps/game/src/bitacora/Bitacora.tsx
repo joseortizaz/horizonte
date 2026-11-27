@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { construirBitacora, NOMBRES_INSIGNIAS } from './contenido'
 import type { LeerVariable } from './contenido'
+import { MapaOficios } from '../oficios/MapaOficios'
 import { UnirseAGrupo } from './UnirseAGrupo'
 import { NotaPagina } from './NotaPagina'
 import { PantallaApoyo } from '../riesgo/PantallaApoyo'
@@ -130,6 +131,8 @@ export function Bitacora({ userId, nombre, leer, faros, onCerrar }: Props) {
             )
           )}
         </div>
+
+        <MapaOficios />
 
         <section className="bitacora-insignias">
           <h2>Mis insignias</h2>

@@ -6,13 +6,14 @@ import type { Area } from './tipos'
 interface Props {
   onGuardada: (nivel: string) => void
   onCancelar: () => void
+  inicial?: { area: Area; deseo: string } // ruta sugerida (por ejemplo, desde el Archipiélago de los Oficios)
 }
 
 // Trazar una ruta con el método WOOP: deseo, resultado, obstáculo y plan
-export function NuevaRuta({ onGuardada, onCancelar }: Props) {
+export function NuevaRuta({ onGuardada, onCancelar, inicial }: Props) {
   const [paso, setPaso] = useState(0)
-  const [area, setArea] = useState<Area>('estudios')
-  const [deseo, setDeseo] = useState('')
+  const [area, setArea] = useState<Area>(inicial?.area ?? 'estudios')
+  const [deseo, setDeseo] = useState(inicial?.deseo ?? '')
   const [resultado, setResultado] = useState('')
   const [obstaculo, setObstaculo] = useState('')
   const [plan, setPlan] = useState('')

@@ -156,4 +156,5 @@ export function construirBitacora(leer: LeerVariable): Seccion[] {
 export const NOMBRES_INSIGNIAS: Record<string, string> = {
   autoconocimiento: 'Autoconocimiento',
   perseverancia: 'Perseverancia',
+  curiosidad: 'Curiosidad',
 }

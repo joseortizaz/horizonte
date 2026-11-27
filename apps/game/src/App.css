@@ -1164,6 +1164,8 @@ body:has(.panel) {
 .etapa-1 { background: #5dade2; }
 .etapa-2 { background: #f5b041; }
 .etapa-3 { background: #27ae60; }
+.etapa-4 { background: #8e44ad; }
+.etapa-5 { background: #1b4f72; }
 
 .panel-tabla-contenedor {
   overflow-x: auto;
@@ -1940,4 +1942,337 @@ body:has(.panel) {
 }
 .panel-eval-vacio {
   color: #7f8c8d;
+}
+
+/* ===== Acto II: talleres del Archipiélago de los Oficios ===== */
+.taller {
+  max-width: 720px;
+}
+.taller-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.taller-reflexion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  text-align: center;
+}
+.taller-escala {
+  justify-content: center;
+}
+.juego {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding-top: 6px;
+}
+.juego h3 {
+  margin: 4px 0 0;
+}
+.juego .opciones {
+  justify-content: center;
+}
+.juego-instruccion {
+  margin: 0;
+  max-width: 560px;
+}
+.juego-marcador {
+  margin: 0;
+  font-weight: bold;
+  color: #1b4f72;
+}
+.juego-final {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 560px;
+}
+.juego-boton-grande {
+  min-width: 220px;
+  padding: 16px 28px;
+  font-size: 1.15rem;
+}
+.opcion.correcta {
+  background: #d5f5e3;
+  border-color: #1e8449;
+}
+.opcion.incorrecta {
+  background: #fadbd8;
+  border-color: #c0392b;
+}
+
+/* Astillero */
+.clavos-casco {
+  display: flex;
+  gap: 18px;
+  padding: 18px 26px;
+  background: #a0522d;
+  border: 4px solid #3b2a1a;
+  border-radius: 0 0 60px 60px;
+}
+.clavo {
+  width: 14px;
+  height: 34px;
+  background: linear-gradient(#bdc3c7, #7f8c8d);
+  border-radius: 3px;
+  position: relative;
+  transform: translateY(-18px);
+  transition: transform 0.15s;
+}
+.clavo::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 24px;
+  height: 7px;
+  background: #95a5a6;
+  border-radius: 3px;
+}
+.clavo.estado-1 {
+  transform: translateY(-9px);
+}
+.clavo.estado-2 {
+  transform: translateY(0);
+  height: 6px;
+}
+.clavo.actual {
+  outline: 3px solid #ffd54f;
+  outline-offset: 4px;
+}
+.clavos-barra {
+  position: relative;
+  width: min(480px, 90%);
+  height: 30px;
+  border-radius: 15px;
+  background: #fadbd8;
+  border: 2px solid #922b21;
+  overflow: hidden;
+}
+.clavos-zona-buena {
+  position: absolute;
+  left: 34%;
+  width: 32%;
+  top: 0;
+  bottom: 0;
+  background: #abebc6;
+}
+.clavos-zona-perfecta {
+  position: absolute;
+  left: 44%;
+  width: 12%;
+  top: 0;
+  bottom: 0;
+  background: #27ae60;
+}
+.clavos-marca {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 6px;
+  margin-left: -3px;
+  background: #1c2833;
+}
+
+/* Observatorio */
+.series-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.series-casilla {
+  min-width: 52px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  background: #1b2631;
+  color: #f7dc6f;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+.series-casilla.incognita {
+  background: #5b2c6f;
+  color: #ffffff;
+}
+.series-opciones {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(64px, 1fr));
+  gap: 10px;
+}
+.series-opciones .opcion {
+  font-size: 1.3rem;
+  padding: 12px;
+}
+
+/* Taller de colores */
+.vela-area {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.vela-cuadricula {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  width: min(300px, 80vw);
+  aspect-ratio: 1;
+  border: 4px solid #3b2a1a;
+  touch-action: none;
+}
+.vela-celda {
+  border: 1px solid #00000033;
+  padding: 0;
+  cursor: pointer;
+}
+.vela-vista {
+  width: 160px;
+  height: 160px;
+}
+.vela-paleta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* Escuela */
+.escuela-vecino {
+  background: #eafaf1;
+  border-left: 5px solid #1e8449;
+  padding: 12px 16px;
+  border-radius: 8px;
+  max-width: 560px;
+  text-align: left;
+}
+.escuela-vecino p {
+  margin: 6px 0 0;
+  font-size: 1.1rem;
+}
+.escuela-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 560px;
+}
+.escuela-opciones .opcion {
+  text-align: left;
+  padding: 12px 14px;
+}
+
+/* Mercadito */
+.mercado-gana {
+  color: #1e8449;
+}
+.mercado-pierde {
+  color: #c0392b;
+}
+
+/* Capitanía */
+.carga-reglas {
+  text-align: left;
+  max-width: 480px;
+  line-height: 1.7;
+}
+.carga-caja {
+  position: relative;
+  width: 160px;
+  height: 130px;
+  border: 6px solid;
+  border-radius: 10px;
+  background: #f5e6c8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.carga-figura {
+  font-size: 3.4rem;
+  line-height: 1;
+}
+.carga-codigo {
+  font-family: monospace;
+  font-size: 1rem;
+  color: #5d6d7e;
+}
+.carga-fragil {
+  position: absolute;
+  top: 8px;
+  right: -14px;
+  transform: rotate(14deg);
+  background: #c0392b;
+  color: #ffffff;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.carga-aviso {
+  min-height: 1.4em;
+  margin: 0;
+  font-weight: bold;
+}
+.carga-aviso.ok {
+  color: #1e8449;
+}
+.carga-aviso.error {
+  color: #c0392b;
+}
+.carga-muelles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 10px;
+}
+.carga-muelles .opcion {
+  padding: 14px;
+  font-size: 1.05rem;
+}
+.carga-figura-boton {
+  font-size: 1.3rem;
+}
+
+/* Mapa de oficios (Bitácora) */
+.mapa-oficios {
+  grid-column: 1 / -1;
+}
+.mapa-hexagono {
+  width: min(340px, 100%);
+  display: block;
+  margin: 0 auto;
+}
+.mapa-leyenda {
+  text-align: center;
+  font-size: 0.9rem;
+}
+.mapa-muestra {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  vertical-align: middle;
+  margin: 0 4px 0 12px;
+  border-top: 3px solid #148f77;
+}
+.mapa-muestra.habilidad {
+  border-top: 3px dashed #e67e22;
+}
+.mapa-tipo {
+  margin-top: 12px;
+}
+.diario-sugerencia {
+  background: #eaf2f8;
+  border-left: 5px solid #2874a6;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 12px 0;
+}
+.diario-sugerencia p {
+  margin: 4px 0 10px;
 }

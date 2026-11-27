@@ -27,7 +27,7 @@ interface Joven {
   ultima_revision: string | null
 }
 
-const ETAPAS = ['Sin empezar', 'Explorando la isla', 'Faro encendido', 'Acto I completado']
+const ETAPAS = ['Sin empezar', 'Explorando la isla', 'Faro encendido', 'Acto I completado', 'En el Archipiélago', 'Acto II completado']
 
 function haceCuanto(fecha: string | null) {
   if (!fecha) return 'Nunca'

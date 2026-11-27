@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as Phaser from 'phaser'
 import { PuertoScene } from './scenes/PuertoScene'
+import { ArchipielagoScene } from './scenes/ArchipielagoScene'
 import { COLOR_MAR, VISTA } from './arte/isla'
 import { cargarElemento, generarAvatarIlustrado } from '../avatar/ilustrado'
 import type { AvatarIlustrado } from '../avatar/ilustrado'
@@ -55,7 +56,8 @@ export function PhaserGame({ avatar, partida, resueltos }: {
           game.registry.set('avatarForma', avatarForma)
         },
       },
-      scene: [PuertoScene],
+      // La primera escena de la lista es la que arranca: la de la región guardada
+      scene: partida.region === 'oficios' ? [ArchipielagoScene, PuertoScene] : [PuertoScene, ArchipielagoScene],
     })
     }
     iniciar()

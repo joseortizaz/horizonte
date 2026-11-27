@@ -23,6 +23,9 @@ import { EsperaConsentimiento } from './consentimiento/EsperaConsentimiento'
 import { MensajesAcompanamiento } from './riesgo/MensajesAcompanamiento'
 import { PantallaApoyo } from './riesgo/PantallaApoyo'
 import { Cuestionario } from './evaluacion/Cuestionario'
+import { TallerOficio } from './oficios/TallerOficio'
+import type { Taller } from './oficios/TallerOficio'
+import { cambiarVela } from './game/estado'
 import type { EvaluacionPendiente } from './evaluacion/Cuestionario'
 import './App.css'
 
@@ -36,7 +39,22 @@ const RESUELTOS: Record<string, string> = {
   semilla: 'tiene_semilla',
   eco: 'eco_resuelto',
   'marea-despedida': 'insignia_autoconocimiento',
+  // Acto II
+  'llegada-oficios': 'llegada_oficios_vista',
+  brisa: 'conoce_a_brisa',
+  'brisa-despedida': 'insignia_curiosidad',
+  'eco-oficios': 'eco_oficios_resuelto',
+  'taller:realista': 'taller_realista',
+  'taller:investigador': 'taller_investigador',
+  'taller:artistico': 'taller_artistico',
+  'taller:social': 'taller_social',
+  'taller:emprendedor': 'taller_emprendedor',
+  'taller:convencional': 'taller_convencional',
 }
+
+// Escena de Phaser de cada región
+const ESCENAS: Record<string, string> = { raices: 'PuertoScene', oficios: 'ArchipielagoScene' }
+const ORIGEN_INSIGNIA: Record<string, string> = { raices: 'isla-raices', oficios: 'archipielago-oficios' }
 
 export default function App() {
   const { session, cargando } = useSession()
@@ -165,9 +183,11 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
 }) {
   const [faros, setFaros] = useState(partida.faros.length)
   const [mensaje, setMensaje] = useState(
-    partida.faros.includes('raices')
-      ? 'El Faro de las Raíces ya brilla. Pronto se abrirán nuevas regiones.'
-      : 'Explora la Isla de las Raíces.'
+    partida.region === 'oficios'
+      ? 'Navega entre las islitas del Archipiélago de los Oficios.'
+      : partida.faros.includes('raices')
+        ? 'El Faro de las Raíces ya brilla. La barca de la orilla sur te lleva al Archipiélago de los Oficios.'
+        : 'Explora la Isla de las Raíces.'
   )
   const posicionPendiente = useRef<Posicion | null>(null)
   const nombre = (session.user.user_metadata.display_name as string | undefined) ?? 'Navegante'
@@ -177,6 +197,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
     const companero = COMPANEROS.find((c) => c.id === avatar.companero)?.nombre ?? 'Compañero'
     const n = new Narrativa(partida.narrativa, companero)
     n.fijarVariable('faro_encendido', partida.faros.includes('raices'))
+    n.fijarVariable('faro_oficios_encendido', partida.faros.includes('oficios'))
     return n
   })
   // Lo que ya está resuelto en la isla, para que el juego no lo vuelva a mostrar
@@ -252,6 +273,53 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
     continuarTrasEvaluacion()
   }, [continuarTrasEvaluacion])
 
+  // Acto II: minijuego del taller (se abre al cerrar la presentación del mentor)
+  const [taller, setTaller] = useState<Taller | null>(null)
+  const tallerPendiente = useRef<Taller | null>(null)
+  const viajarPendiente = useRef<string | null>(null)
+
+  // La vela diseñada en el taller de colores (para dibujar la barca)
+  useEffect(() => {
+    void supabase
+      .from('oficios_talleres')
+      .select('extra')
+      .eq('profile_id', session.user.id)
+      .eq('taller', 'artistico')
+      .maybeSingle()
+      .then(({ data }) => {
+        const vela = (data?.extra as { vela?: string[] } | null)?.vela
+        if (vela) cambiarVela(vela)
+      })
+  }, [session.user.id])
+
+  const resueltosAhora = useCallback(
+    () => Object.keys(RESUELTOS).filter((id) => narrativa.leerVariable(RESUELTOS[id]) === true),
+    [narrativa]
+  )
+
+  // Viajar a otra región: se guarda la región, se olvida la posición y cambia la escena
+  const viajar = useCallback(
+    (region: string) => {
+      if (!ESCENAS[region] || region === actual.current.region) return
+      void guardar({ region, posicion: null, narrativa: narrativa.guardarEstado() }).then(() => {
+        EventBus.emit('cambiar-escena', { escena: ESCENAS[region], partida: { ...actual.current }, resueltos: resueltosAhora() })
+      })
+      setMensaje(region === 'oficios' ? 'Rumbo al Archipiélago de los Oficios…' : 'Rumbo a la Isla de las Raíces…')
+    },
+    [actual, guardar, narrativa, resueltosAhora]
+  )
+
+  const terminarTaller = useCallback(
+    (id: Taller, disfrute: number | null) => {
+      setTaller(null)
+      EventBus.emit('reanudar')
+      if (disfrute === null) return // salió sin terminar: puede volver a intentarlo
+      narrativa.fijarVariable('ultimo_disfrute', disfrute)
+      EventBus.emit('hablar', `cierre_${id}`)
+    },
+    [narrativa]
+  )
+
   const abrirDiario = () => {
     if (dialogoAbierto.current) return
     EventBus.emit('pausar')
@@ -285,14 +353,14 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
       void supabase
         .from('insignias')
         .upsert(
-          { profile_id: session.user.id, cualidad, nivel: 'bronce', origen: 'isla-raices' },
+          { profile_id: session.user.id, cualidad, nivel: 'bronce', origen: ORIGEN_INSIGNIA[actual.current.region] ?? 'juego' },
           { onConflict: 'profile_id,cualidad,nivel', ignoreDuplicates: true }
         )
         .then(({ error }) => {
           if (error) console.warn('No se pudo guardar la insignia:', error.message)
         })
     },
-    [session.user.id]
+    [session.user.id, actual]
   )
 
   // Insignias que otorga el servidor (por ejemplo, Perseverancia en el Diario): solo se muestra el aviso
@@ -325,8 +393,22 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
           EventBus.emit('encender-faro')
         } else if (tipo === 'insignia') {
           otorgarInsignia(valor)
+        } else if (tipo === 'viajar') {
+          viajarPendiente.current = valor
+        } else if (tipo === 'minijuego') {
+          tallerPendiente.current = valor as Taller
+        } else if (tipo === 'taller-completado') {
+          EventBus.emit('resolver', `taller:${valor}`)
+          const n = Number(narrativa.leerVariable('talleres_visitados') ?? 0)
+          setMensaje(n >= 4 ? `Islitas visitadas: ${n} / 6. ¡Ya puedes ir al faro de la roca central!` : `Islitas visitadas: ${n} / 6`)
+        } else if (tipo === 'mision-brisa') {
+          setMensaje('Habla con la mujer del mapa, en el muelle de la roca central.')
+        } else if (tipo === 'mision-talleres') {
+          setMensaje('Misión: navega a las islitas y prueba al menos cuatro oficios (0 / 6).')
+        } else if (tipo === 'fin-acto-2') {
+          setMensaje('Fin del Acto II. Mira tu Mapa de oficios en la Bitácora y traza una ruta en tu Diario.')
         } else if (tipo === 'fin-acto-1') {
-          setMensaje('Fin del Acto I. Tu brújula ya se mueve: abre tu Diario de Navegación y traza tus rutas.')
+          setMensaje('Fin del Acto I. Traza tus rutas en el Diario o zarpa en la barca de la orilla sur.')
           ofrecerAlCerrarDialogo.current = true
         }
       }
@@ -346,6 +428,18 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
     setDialogo(null)
     EventBus.emit('dialogo-cerrado')
     void guardar({ narrativa: narrativa.guardarEstado() })
+    // Lo que el guion pidió hacer al terminar la conversación
+    if (tallerPendiente.current) {
+      const id = tallerPendiente.current
+      tallerPendiente.current = null
+      EventBus.emit('pausar')
+      setTaller(id)
+    }
+    if (viajarPendiente.current) {
+      const region = viajarPendiente.current
+      viajarPendiente.current = null
+      viajar(region)
+    }
     // Al cerrar el Acto I se ofrece el cuestionario final (cuando la insignia ya quedó guardada)
     if (ofrecerAlCerrarDialogo.current) {
       ofrecerAlCerrarDialogo.current = false
@@ -355,7 +449,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
         })
       }, 2000)
     }
-  }, [guardar, narrativa, buscarEvaluacion, abrirEvaluacion])
+  }, [guardar, narrativa, buscarEvaluacion, abrirEvaluacion, viajar])
 
   useEffect(() => {
     // Guarda la última posición conocida, si hay una pendiente
@@ -380,19 +474,29 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
     const alEncenderFaro = (id: string) => {
       const encendidos = actual.current.faros
       if (encendidos.includes(id)) return
-      narrativa.fijarVariable('faro_encendido', true)
       setFaros(encendidos.length + 1)
-      setMensaje(
-        narrativa.leerVariable('conoce_a_marea')
-          ? '¡El Faro de las Raíces brilla! Vuelve con Marea.'
-          : '¡El Faro de las Raíces brilla! Busca a Marea, la mujer del bastón, en la orilla.'
-      )
+      if (id === 'oficios') {
+        narrativa.fijarVariable('faro_oficios_encendido', true)
+        setMensaje('¡El Faro de los Oficios brilla! Cuéntaselo a Brisa, en el muelle.')
+      } else {
+        narrativa.fijarVariable('faro_encendido', true)
+        setMensaje(
+          narrativa.leerVariable('conoce_a_marea')
+            ? '¡El Faro de las Raíces brilla! Vuelve con Marea.'
+            : '¡El Faro de las Raíces brilla! Busca a Marea, la mujer del bastón, en la orilla.'
+        )
+      }
       void guardar({ faros: [...encendidos, id], narrativa: narrativa.guardarEstado() })
     }
 
     // Primera vez en la isla: el prólogo empieza solo (antes, el cuestionario inicial si lo acepta).
     // En otras visitas, si hay un cuestionario pendiente, se ofrece al poco de llegar.
-    const alEscenaLista = () => {
+    const alEscenaLista = (region?: string) => {
+      // Primera llegada al archipiélago: la escena de bienvenida empieza sola
+      if (region === 'oficios') {
+        if (!narrativa.leerVariable('llegada_oficios_vista')) window.setTimeout(() => alHablar('llegada_oficios'), 600)
+        return
+      }
       void (consultaEvaluacion.current ?? Promise.resolve(null)).then((e) => {
         const sinPrologo = !narrativa.leerVariable('prologo_visto')
         if (e && e.momento === 'inicio' && sinPrologo) {
@@ -501,6 +605,7 @@ function Juego({ session, avatar, partida, actual, guardar, onEditarPersonaje }:
         />
       )}
 
+      {taller && <TallerOficio taller={taller} onTerminar={terminarTaller} />}
       {evaluacion && <Cuestionario evaluacion={evaluacion} onCerrar={cerrarEvaluacion} />}
       {apoyo && <PantallaApoyo nivel={apoyo} onCerrar={cerrarApoyo} />}
 

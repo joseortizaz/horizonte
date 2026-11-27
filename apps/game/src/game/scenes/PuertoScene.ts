@@ -4,6 +4,8 @@ import { avatarSvg, svgADataUri } from '../../avatar/dibujo'
 import { IMAGENES } from '../../avatar/ilustrado'
 import type { AvatarIlustrado } from '../../avatar/ilustrado'
 import { FONDOS, ISLA, ISLA_ANTERIOR, MUNDO } from '../arte/isla'
+import { barcaSvg } from '../arte/barca'
+import { velaActual } from '../estado'
 import type { Avatar } from '../../avatar/tipos'
 import type { Partida, Posicion } from '../../partida/tipos'
 
@@ -32,6 +34,7 @@ const LUGARES = {
   huella: { x: 1173, y: 357 },
   semilla: { x: 1275, y: 791 },
   eco: { x: 1411, y: 459 },
+  muelle: { x: 1000, y: 900 }, // en la arena, junto a la barca
 }
 
 // ¿El punto está sobre la isla? (fuera de ella está el mar)
@@ -63,6 +66,7 @@ export class PuertoScene extends Phaser.Scene {
   private jugador!: Phaser.GameObjects.Image
   private companero!: Phaser.GameObjects.Image
   private sombraJugador!: Phaser.GameObjects.Ellipse
+  private barca!: Phaser.GameObjects.Image
   private companeroEnSuelo = false
   private altoJugador = 0
   private indicadorMarea!: Phaser.GameObjects.Text
@@ -103,6 +107,7 @@ export class PuertoScene extends Phaser.Scene {
     this.load.image('concha', IMAGENES.concha)
     this.load.image('huella', IMAGENES.huella)
     this.load.image('semilla', IMAGENES.semilla)
+    if (!this.textures.exists('barca')) this.load.svg('barca', svgADataUri(barcaSvg(velaActual())), { scale: RESOLUCION })
   }
 
   create() {
@@ -163,6 +168,11 @@ export class PuertoScene extends Phaser.Scene {
       repeat: -1,
       ease: 'Sine.easeInOut',
     })
+
+    // La barca, en la orilla sur: lleva al Archipiélago de los Oficios cuando termina el Acto I
+    this.barca = this.add.image(LUGARES.muelle.x, LUGARES.muelle.y + 95, 'barca').setScale(0.6).setDepth(4)
+    this.tweens.add({ targets: this.barca, angle: 2, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    this.agregarInteractivo('muelle', 'muelle_raices', this.barca, 130, false, LUGARES.muelle.x, LUGARES.muelle.y)
 
     // Los tres Recuerdos, brillando entre la Bruma
     this.crearRecuerdo('concha', resueltos)
@@ -303,6 +313,22 @@ export class PuertoScene extends Phaser.Scene {
     }
     const alResolver = (id: string) => this.resolver(id)
     const alEncenderFaro = () => this.encenderFaro()
+    const alCambiarVela = (vela: string[] | null) => {
+      const clave = `barca-${Date.now()}`
+      this.load.svg(clave, svgADataUri(barcaSvg(vela)), { scale: RESOLUCION })
+      this.load.once(Phaser.Loader.Events.COMPLETE, () => this.barca?.setTexture(clave))
+      this.load.start()
+    }
+    // Viaje a otra región: la escena de destino arranca con la partida actualizada
+    const alCambiarEscena = (datos: { escena: string; partida: Partida; resueltos: string[] }) => {
+      if (datos.escena === this.scene.key) return
+      this.registry.set('partida', datos.partida)
+      this.registry.set('resueltos', datos.resueltos)
+      this.registry.set('llegaEnBarca', true)
+      this.scene.start(datos.escena)
+    }
+    EventBus.on('vela-cambiada', alCambiarVela)
+    EventBus.on('cambiar-escena', alCambiarEscena)
 
     EventBus.on('dialogo-abierto', alAbrirDialogo)
     EventBus.on('dialogo-cerrado', alCerrarDialogo)
@@ -338,12 +364,14 @@ export class PuertoScene extends Phaser.Scene {
       EventBus.off('reanudar', alCerrarDialogo)
       EventBus.off('resolver', alResolver)
       EventBus.off('encender-faro', alEncenderFaro)
+      EventBus.off('vela-cambiada', alCambiarVela)
+      EventBus.off('cambiar-escena', alCambiarEscena)
     }
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, limpiar)
     this.events.once(Phaser.Scenes.Events.DESTROY, limpiar)
 
     // Avisa a React que la escena está lista (por ejemplo, para iniciar el prólogo)
-    EventBus.emit('escena-lista')
+    EventBus.emit('escena-lista', 'raices')
   }
 
   update(time: number, delta: number) {
@@ -448,7 +476,12 @@ export class PuertoScene extends Phaser.Scene {
 
   // Posición guardada; las partidas de mundos anteriores se convierten a la isla actual
   private posicionInicial(guardada: Posicion | null) {
-    if (!guardada) return LUGARES.inicio
+    // Al volver en barca se aparece junto a ella
+    if (this.registry.get('llegaEnBarca')) {
+      this.registry.set('llegaEnBarca', false)
+      return LUGARES.muelle
+    }
+    if (!guardada || (guardada.mundo ?? 0) > 3) return LUGARES.inicio
     let p = { x: guardada.x, y: guardada.y }
     if (guardada.mundo !== 3) {
       // mundo 1 (800 × 600) → mundo 2 → isla actual, conservando el lugar relativo en la isla

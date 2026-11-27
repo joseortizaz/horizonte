@@ -4,7 +4,8 @@ import { PantallaApoyo } from '../riesgo/PantallaApoyo'
 import { NuevaRuta } from './NuevaRuta'
 import { useDiario } from './useDiario'
 import { AVANCES, nombreArea } from './tipos'
-import type { Meta } from './tipos'
+import type { Area, Meta } from './tipos'
+import { TIPOS, cargarTalleres, principales } from '../oficios/mapa'
 
 interface Props {
   desbloqueado: boolean
@@ -192,9 +193,37 @@ function Recordatorios() {
   )
 }
 
+// Después del Archipiélago de los Oficios: Brisa sugiere comprobar el mapa "caminando"
+function SugerenciaVocacion({ metas, onTrazar }: { metas: Meta[]; onTrazar: (inicial: { area: Area; deseo: string }) => void }) {
+  const [oficio, setOficio] = useState<string | null>(null)
+  const tieneRutaVocacion = metas.some((m) => m.estado === 'activa' && m.area === 'vocacion')
+
+  useEffect(() => {
+    if (tieneRutaVocacion) return
+    void cargarTalleres().then((filas) => {
+      if (!filas || filas.length < 4) return
+      const t = TIPOS.find((x) => x.id === principales(filas, 1)[0].taller)
+      setOficio(t ? t.oficios[0].toLowerCase() : null)  // un campo, p. ej. «enfermería»
+    })
+  }, [tieneRutaVocacion])
+
+  if (tieneRutaVocacion || !oficio) return null
+  const deseo = `Conversar con alguien que trabaje en ${oficio} (u otro campo de mi mapa) y preguntarle cómo es su día`
+  return (
+    <section className="diario-sugerencia">
+      <strong>Una ruta que te sugiere Brisa</strong>
+      <p>Los mapas se comprueban caminando. ¿Y si conversas con alguien que trabaje en lo que te llamó la atención?</p>
+      <button className="creador-guardar" onClick={() => onTrazar({ area: 'vocacion', deseo })}>
+        Trazar esta ruta
+      </button>
+    </section>
+  )
+}
+
 export function Diario({ desbloqueado, onCerrar, onInsignia, onCambio }: Props) {
   const { datos, error, recargar } = useDiario()
   const [trazando, setTrazando] = useState(false)
+  const [inicialRuta, setInicialRuta] = useState<{ area: Area; deseo: string } | undefined>(undefined)
   const [apoyo, setApoyo] = useState<'moderado' | 'alto' | null>(null)
   const [verAnteriores, setVerAnteriores] = useState(false)
 
@@ -244,9 +273,14 @@ export function Diario({ desbloqueado, onCerrar, onInsignia, onCambio }: Props) 
           <p>Cargando…</p>
         ) : trazando ? (
           <NuevaRuta
-            onCancelar={() => setTrazando(false)}
+            inicial={inicialRuta}
+            onCancelar={() => {
+              setTrazando(false)
+              setInicialRuta(undefined)
+            }}
             onGuardada={async (nivel) => {
               setTrazando(false)
+              setInicialRuta(undefined)
               if (nivel === 'moderado' || nivel === 'alto') setApoyo(nivel)
               await actualizar(false)
             }}
@@ -273,6 +307,16 @@ export function Diario({ desbloqueado, onCerrar, onInsignia, onCambio }: Props) 
               volver a mirar tu brújula. Tus notas son privadas; solo si escribes algo que haga pensar que tu
               seguridad está en riesgo, una persona adulta del equipo lo leerá para poder ayudarte.
             </p>
+
+            {activas.length < 3 && (
+              <SugerenciaVocacion
+                metas={datos.metas}
+                onTrazar={(inicial) => {
+                  setInicialRuta(inicial)
+                  setTrazando(true)
+                }}
+              />
+            )}
 
             {activas.length === 0 && (
               <p className="diario-vacio">
